@@ -366,7 +366,7 @@ void OperatorTheory::updateWeakerLowerBound() {
 
 }
 
-void OperatorTheory::runOperatorTheory() {
+void OperatorTheory::runCostOperator() {
 
 }
 

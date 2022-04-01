@@ -34,7 +34,7 @@ public:
 	void generateCycleAndUpdateBasicSolution();
 	void generateAcyclicConnectedGraphSolution();
 	void updateWeakerLowerBound();
-	void runOperatorTheory();
+	void runCostOperator();
 };
 
 #endif
