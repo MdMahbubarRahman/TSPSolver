@@ -42,9 +42,6 @@ public:
 	void performRowColumnReduction();
 	void rowScanning(std::set<int>& coveredRows, std::set<int>& coveredColumns, std::map<int, int>& boxPoints);
 	void columnScanning(std::set<int>& coveredRows, std::set<int>& coveredColumns, std::map<int, int>& boxPoints);
-	void diagonalSelection(std::set<int>& coveredRows, std::set<int>& coveredColumns, std::map<int, int>& boxPoints);
-	void diagonalSelection1(std::set<int>& coveredRows, std::set<int>& coveredColumns, std::map<int, int>& boxPoints);
-	void diagonalSelection2(std::set<int>& coveredRows, std::set<int>& coveredColumns, std::map<int, int>& boxPoints);
 	void diagonalSelectionAdv(std::set<int>& coveredRows, std::set<int>& coveredColumns, std::map<int, int>& boxPoints);
 	int uncoveredZeroScanning(std::set<int>& coveredRows, std::set<int>& coveredColumns);
 	void coverMinimumValueAssignmentsAndCheckOptimality(bool& assignmentOptimal, std::set<int>& coveredRows, std::set<int>& coveredColumns, std::map<int, int>& boxPoints, std::list<IntersectionPoint>& twiceCoveredPoints);
