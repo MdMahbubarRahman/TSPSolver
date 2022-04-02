@@ -1,36 +1,55 @@
 #include <iostream>
+#include <string>
 #include <vector>
 #include <list>
 #include <set>
 #include <Queue>
 #include <map>
 
-
 #ifndef OPERATORTHEORY_H
 #define OPERATORTHEORY_H
 
+struct BasicCell {
+	int rowId;
+	int colID;
+	double value;
+};
 
-class OperatorTheory{
+enum Direction {
+	East, West, North, South, Origin
+};
+
+enum CellType {
+	Getter, Giver
+};
+
+struct AllocatedCell {
+	Direction prevDirection;
+	Direction postDirection;
+	BasicCell cellProperty;
+	CellType cellType;
+};
+
+class OperatorTheory {
 private:
-	int tableauSize = 0;
 	std::set<int> Ip;
 	std::set<int> Iq;
 	std::set<int> Jp;
 	std::set<int> Jq;
-	std::vector<double> currentRowDualVariables;
-	std::vector<double> currentColumnDualVariables;
-	std::vector<double> transformedRowDualVariables;
-	std::vector<double> transformedColumnDualVariables;
-	std::multimap<int, int> basicSolnCells; //map columns to rows for the basic solution
-	std::vector<std::vector<double>> tpTableau;
+	std::list<BasicCell> basicSolution;
+	std::vector<double> rowWiseDualSolution;
+	std::vector<double> columnWiseDualSolution;
+	std::vector<std::vector<double>> costTableau;
 
 public:
 	OperatorTheory();
-	OperatorTheory(std::multimap<int, int> basicSolnCells, std::vector<std::vector<double>> tpTableau);
-	OperatorTheory(const OperatorTheory & opThr);
-	void scanningRoutine();
-	void updateDualVariables();
-	void findMaxDeltaAndEnteringCell();
+	OperatorTheory(std::list<BasicCell> basicSolution, std::vector<std::vector<double>> costTableau);
+	OperatorTheory(std::list<BasicCell> basicSolution, std::vector<double> rowWiseDualSolution, std::vector<double> columnWiseDualSolution, std::vector<std::vector<double>> costTableau);
+	OperatorTheory(const OperatorTheory& opThr);
+	void generateInitialDualSolution();
+	void scanningRoutine(int p, int q);
+	void updateDualSolution();
+	void findMaxDeltaAndEnteringCell(int p, int q);
 	void generateCycleAndUpdateBasicSolution();
 	void generateAcyclicConnectedGraphSolution();
 	void updateWeakerLowerBound();
@@ -38,6 +57,8 @@ public:
 };
 
 #endif
+
+
 
 
 

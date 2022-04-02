@@ -1,23 +1,126 @@
 #include "OperatorTheory.h"
 
+//default constructor
 OperatorTheory::OperatorTheory() {
-
+	std::cout << "\nThe default constructor has been called!" << std::endl;
 }
 
-OperatorTheory::OperatorTheory(std::multimap<int, int> basicCells, std::vector<std::vector<double>> tableau) {
-
+//default operator to perform cost operator from tsp solution
+OperatorTheory::OperatorTheory(std::list<BasicCell> basicSol, std::vector<std::vector<double>> cTableau) {
+	//populate all other values using these two input values
+	basicSolution = basicSol;
+	costTableau = cTableau;
+	for (int i = 0; i < costTableau.size(); i++) {
+		rowWiseDualSolution.push_back(0);
+		columnWiseDualSolution.push_back(0);
+	}
 }
 
+//constructor
+OperatorTheory::OperatorTheory(std::list<BasicCell> basicSol, std::vector<double> rowWiseDualSol, std::vector<double> columnWiseDualSol, std::vector<std::vector<double>> cTableau) {
+	std::cout << "\nThe operator theory constructor has been called!" << std::endl;
+	basicSolution = basicSol;
+	rowWiseDualSolution = rowWiseDualSol;
+	columnWiseDualSolution = columnWiseDualSol;
+	costTableau = cTableau;
+}
+
+//copy constructor
 OperatorTheory::OperatorTheory(const OperatorTheory& opThr) {
-
+	std::cout << "\nThe copy constructor has been called!" << std::endl;
+	basicSolution = opThr.basicSolution;
+	rowWiseDualSolution = opThr.rowWiseDualSolution;
+	columnWiseDualSolution = opThr.columnWiseDualSolution;
+	costTableau = opThr.costTableau;
 }
 
-void OperatorTheory::scanningRoutine() {
+//generate initial dual solution
+void OperatorTheory::generateInitialDualSolution() {
+	std::multimap<int, int> rowColMapForBasicSolution;
+	std::multimap<int, int> colRowMapForBasicSolution;
+	for (auto& it : basicSolution) {
+		rowColMapForBasicSolution.insert(std::pair<int, int>(it.rowId, it.colID));
+		colRowMapForBasicSolution.insert(std::pair<int, int>(it.colID, it.rowId));
+	}
+	//generate dual solution
+	bool dualflag = false;
+	std::map<int, int> mapForRowDualSolution;
+	std::map<int, int> mapForColumnDualSolution;
+	for (int i = 0; i < costTableau.size(); i++) {
+		mapForRowDualSolution.insert(std::pair<int, int>(i, 0));
+		mapForColumnDualSolution.insert(std::pair<int, int>(i, 0));
+	}
+	mapForRowDualSolution.erase(0);
+	mapForRowDualSolution.insert(std::pair<int, int>(0, 1));
+	rowWiseDualSolution[0] = 0;
+	while (!dualflag) {
+		//update column dual solution
+		for (auto& it : mapForRowDualSolution) {
+			if (it.second == 1) {
+				for (auto itt = rowColMapForBasicSolution.lower_bound(it.first); itt != rowColMapForBasicSolution.upper_bound(it.first); itt++) {
+					int col = (*itt).second;
+					if (mapForColumnDualSolution[col] == 0) {
+						mapForColumnDualSolution.erase(col);
+						mapForColumnDualSolution.insert(std::pair<int, int>(col, 1));
+						double rowDualVal = rowWiseDualSolution.at(it.first);
+						double cellCost = costTableau[(*itt).first][col];
+						double colDualVal = cellCost - rowDualVal;
+						columnWiseDualSolution[col] = colDualVal;
+					}
+				}
+			}
+		}
+		//update row dual solution
+		for (auto& it : mapForColumnDualSolution) {
+			if (it.second == 1) {
+				for (auto itt = colRowMapForBasicSolution.lower_bound(it.first); itt != colRowMapForBasicSolution.upper_bound(it.first); itt++) {
+					int row = (*itt).second;
+					if (mapForRowDualSolution[row] == 0) {
+						mapForRowDualSolution.erase(row);
+						mapForRowDualSolution.insert(std::pair<int, int>(row, 1));
+						double colDualVal = columnWiseDualSolution.at(it.first);
+						double cellCost = costTableau[row][(*itt).first];
+						double rowDualVal = cellCost - colDualVal;
+						rowWiseDualSolution[row] = rowDualVal;
+					}
+				}
+			}
+		}
+		//check whether dual solution generation is complete
+		int counter = 0;
+		for (auto& it : mapForColumnDualSolution) {
+			if (it.second == 1) {
+				counter += 1;
+			}
+		}
+		for (auto& it : mapForRowDualSolution) {
+			if (it.second == 1) {
+				counter += 1;
+			}
+		}
+		std::cout << "\nThe number of dual solutions found : " << counter << std::endl;
+		if (counter == (2 * costTableau.size())) {
+			dualflag = true;
+		}
+	}
+	std::cout << "\nShow the dual solutions." << std::endl;
+	std::cout << "\nThe row dual solution are : " << std::endl;
+	for (auto& it : rowWiseDualSolution) {
+		std::cout << it << std::endl;
+	}
+	std::cout << "\nThe column dual solution are : " << std::endl;
+	for (auto& it : columnWiseDualSolution) {
+		std::cout << it << std::endl;
+	}
+}
+
+//scanning routine to populate Ip, Iq, Jp, Jq sets
+void OperatorTheory::scanningRoutine(int p, int q) {
 	std::vector<int> rowLabel;
 	std::vector<int> columnLabel;
-	int cellRowID = 0;
-	int cellColumnID = 0;
-	int size = tableauSize;
+	int cellRowID = p;
+	int cellColumnID = q;
+	int size = costTableau.size();
 	bool stopFlag = false;
 	int iter = 0;
 	//Populate rowlabel and columnlabel with  default values;
@@ -26,104 +129,106 @@ void OperatorTheory::scanningRoutine() {
 		columnLabel.push_back(0);
 	}
 	//Run scanning routine
+	bool newColumnLabel = false;
+	bool newRowLabel = false;
 	while (!stopFlag) {
 		iter += 1;
-		bool newColumnLabel = false;
-		bool newRowLabel = false;
 		if (iter == 1) {
-			//0. Label with 1 the columns of basis cells in row p cexept for basis cell (p,q); label row p with 2
-			for (auto it = basicSolnCells.begin(); it != basicSolnCells.end(); it++) {
-				if ((*it).first == cellRowID && (*it).second != cellColumnID) {
-					columnLabel[(*it).second] = 1;
+			std::cout << "\nLabel with 1 the columns of basis cells in row p cexept for basis cell (p,q); label row p with 2" << std::endl;
+			for (auto it = basicSolution.begin(); it != basicSolution.end(); it++) {
+				if ((*it).rowId == cellRowID && (*it).colID != cellColumnID) {
+					columnLabel[(*it).colID] = 1;
 					newColumnLabel = true;
 				}
 			}
 			rowLabel[cellRowID] = 2;
 		}
-		//1. If no new columns were labelled 1 on the preceding step go to 5. otherwise go to 2.
+		std::cout << "\nIf no new columns were labelled 1 on the preceding step go to 5. otherwise go to 2." << std::endl;
 		if (newColumnLabel != true) {
 			break;
 		}
-		//2. For each column labelled with 1, label with 1 each row containing a basis cell in that column unless the row is 
-		//labelled with 2; then change the label of the column to 2.
+		std::cout << "\nFor each column labelled with 1, label with 1 each row containing a basis cell in that column unless the row is labelled with 2; then change the label of the column to 2." << std::endl;
 		for (int i = 0; i < size; i++) {
 			if (columnLabel[i] == 1) {
-				for (auto it = basicSolnCells.begin(); it != basicSolnCells.end(); ++it) {
-					if ((*it).second == i && rowLabel[(*it).first] != 2) {
-						rowLabel[(*it).first] = 1;
+				for (auto it = basicSolution.begin(); it != basicSolution.end(); ++it) {
+					if ((*it).colID == i && rowLabel[(*it).rowId] != 2) {
+						rowLabel[(*it).rowId] = 1;
 						newRowLabel = true;
 					}
 				}
 				columnLabel[i] = 2;
 			}
 		}
-		//3. If no new rows were labelled with 1 on the preceeding step go to 5. Otherwise go to 4.
+		newColumnLabel = false;
+		std::cout << "\nIf no new rows were labelled with 1 on the preceeding step go to 5. Otherwise go to 4." << std::endl;
 		if (newRowLabel != true) {
 			break;
 		}
-		//4. For each row labelled with 1, label with 1 each column containing a basis cell in that row unless the column
-		//is labelled with 2; then change the label of the row to 2. Go to 1.
+		std::cout << "\nFor each row labelled with 1, label with 1 each column containing a basis cell in that row unless the column is labelled with 2; then change the label of the row to 2. Go to 1." << std::endl;
 		for (int i = 0; i < size; i++) {
 			if (rowLabel[i] == 1) {
-				for (auto it = basicSolnCells.begin(); it != basicSolnCells.end(); ++it) {
-					if ((*it).first == i && columnLabel[(*it).second] != 2) {
-						columnLabel[(*it).second] = 1;
+				for (auto it = basicSolution.begin(); it != basicSolution.end(); ++it) {
+					if ((*it).rowId == i && columnLabel[(*it).colID] != 2) {
+						columnLabel[(*it).colID] = 1;
 						newColumnLabel = true;
 					}
 				}
 				rowLabel[i] = 2;
 			}
 		}
+		newRowLabel = false;
 	}
-	//5. Stop. The set Ip(Jp) consists of the rows(columns) labelled with 2; the set Iq(Jq) consists of the 
-	//unlabelled rows(columns).
+	std::cout << "\nStop. The set Ip(Jp) consists of the rows(columns) labelled with 2; the set Iq(Jq) consists of the unlabelled rows(columns)." << std::endl;
 	for (int i = 0; i < size; i++) {
 		rowLabel[i] == 2 ? Ip.insert(i) : Iq.insert(i);
 		columnLabel[i] == 2 ? Jp.insert(i) : Jq.insert(i);
 	}
 }
 
-
-void OperatorTheory::updateDualVariables() {
+//update dual variables
+void OperatorTheory::updateDualSolution() {
 	//Dual solutions for basis preserving cost operators \sigma Cpq+
+	std::vector<double> transformedRowWiseDualSolution;
+	std::vector<double> transformedColumnWiseDualSolution;
+	int size = costTableau.size();
 	double delta = 0;
 	//update row dual variables
-	for (int i = 0; i < tableauSize; i++) {
+	for (int i = 0; i < size; i++) {
 		auto it = Ip.find(i);
 		if (it != Ip.end()) {
-			transformedRowDualVariables[i] = currentRowDualVariables[i] + delta;
+			transformedRowWiseDualSolution[i] = rowWiseDualSolution[i] + delta;
 		}
 		else {
-			transformedRowDualVariables[i] = currentRowDualVariables[i];
+			transformedRowWiseDualSolution[i] = rowWiseDualSolution[i];
 		}
 	}
 	//update column dual variables
-	for (int i = 0; i < tableauSize; i++) {
+	for (int i = 0; i < size; i++) {
 		auto it = Jp.find(i);
 		if (it != Jp.end()) {
-			transformedColumnDualVariables[i] = currentColumnDualVariables[i] - delta;
+			transformedColumnWiseDualSolution[i] = columnWiseDualSolution[i] - delta;
 		}
 		else {
-			transformedColumnDualVariables[i] = currentColumnDualVariables[i];
+			transformedColumnWiseDualSolution[i] = columnWiseDualSolution[i];
 		}
 	}
 }
 
-
-void OperatorTheory::findMaxDeltaAndEnteringCell() {
+//find max delta and find the potential entering cells
+void OperatorTheory::findMaxDeltaAndEnteringCell(int p, int q) {
 	double maxDelta = INFINITY;
-	int cellRowID = 0;
-	int cellColumnID = 0;
+	int cellRowID = p;
+	int cellColumnID = q;
 	int enteringCellRowID = 0;
 	int enteringCellColumnID = 0;
 	double val = 0;
-	for (auto it: Ip) {
-		for (auto itt: Jq) {
+	for (auto it : Ip) {
+		for (auto itt : Jq) {
 			if (it == cellRowID && itt == cellColumnID) {
 				//do nothing
 			}
 			else {
-				val = tpTableau[it][itt] - currentRowDualVariables[it] - currentColumnDualVariables[itt];
+				val = costTableau[it][itt] - rowWiseDualSolution[it] - columnWiseDualSolution[itt];
 				if (val < maxDelta) {
 					maxDelta = val;
 					enteringCellRowID = it;
@@ -136,6 +241,7 @@ void OperatorTheory::findMaxDeltaAndEnteringCell() {
 
 //generates cycle or loop containing entering and leaving cells
 void OperatorTheory::generateCycleAndUpdateBasicSolution() {
+	std::map<BasicCell, double> cellToAllocatedValueMap;
 	std::multimap<int, int> basicSolution;
 	int enteringCellRowID = 0;
 	int enteringCellColumnID = 1;
@@ -163,20 +269,11 @@ void OperatorTheory::generateCycleAndUpdateBasicSolution() {
 		}
 	}
 	//now lets form a cycle taking entering cell and leaving cell of the basic solution.
-	std::cout <<"\nThe value of cell : (1, 0) is : " << solutionToSupplyMap[1][0] << std::endl;
+	std::cout << "\nThe value of cell : (1, 0) is : " << solutionToSupplyMap[1][0] << std::endl;
 	//solutionToSupplyMap[1][0] = 0;
 	//now lets form a cycle taking entering cell and leaving cell of the basic solution.
 	//std::cout << "\nThe value of cell : (1, 0) is : " << solutionToSupplyMap[1][0] << std::endl;
 	//
-
-
-
-
-
-
-
-
-
 
 }
 
@@ -184,16 +281,16 @@ void OperatorTheory::generateCycleAndUpdateBasicSolution() {
 void OperatorTheory::generateAcyclicConnectedGraphSolution() {
 	std::vector<std::vector<double>> costTableau;
 	std::multimap<int, int> assignmentSolution;
-	std::multimap<int, int> transportationSolution; 
+	std::multimap<int, int> transportationSolution;
 	//Need to generate acyclic connected graph which would represent the basic solution 
 	//of the equivalent transportation problem.
 	//populate the cost tableau
 	std::vector<double> rowVec;
 	rowVec.push_back(100000);
-	rowVec.push_back(27); 
-	rowVec.push_back(43); 
-	rowVec.push_back(16); 
-	rowVec.push_back(30); 
+	rowVec.push_back(27);
+	rowVec.push_back(43);
+	rowVec.push_back(16);
+	rowVec.push_back(30);
 	rowVec.push_back(26);
 	costTableau.push_back(rowVec);
 	rowVec.clear();
@@ -238,8 +335,8 @@ void OperatorTheory::generateAcyclicConnectedGraphSolution() {
 	costTableau.push_back(rowVec);
 	rowVec.clear();
 	//show the cost tableau
-	for (auto &it: costTableau) {
-		for (auto iter: it) {
+	for (auto& it : costTableau) {
+		for (auto iter : it) {
 			std::cout << " " << iter << " ";
 		}
 		std::cout << "\n";
@@ -270,7 +367,7 @@ void OperatorTheory::generateAcyclicConnectedGraphSolution() {
 		int indx = 0;
 		for (int j = 1; j < 6; j++) {
 			auto it = assignmentSolution.find(i);
-			j != i?	val2 = costTableau[j][(*it).second]: val2 = INFINITY;
+			j != i ? val2 = costTableau[j][(*it).second] : val2 = INFINITY;
 			if (val2 < val1) {
 				val1 = val2;
 				indx = j;
@@ -279,12 +376,12 @@ void OperatorTheory::generateAcyclicConnectedGraphSolution() {
 		auto itLow = transportationSolution.lower_bound(indx);
 		auto itUp = transportationSolution.upper_bound(indx);
 		int count = 0;
-		for (auto &it = itLow; it != itUp; it++) {
+		for (auto& it = itLow; it != itUp; it++) {
 			count += 1;
 		}
 		if (count <= 1 && indx != i) {
 			//exclude any assignment sol?
-			transportationSolution.insert(std::pair<int,int>(indx,(*col).second));
+			transportationSolution.insert(std::pair<int, int>(indx, (*col).second));
 			int numColCells = columnCells.at(indx);
 			columnCells[(*col).second] = numColCells + 1;
 		}
@@ -302,14 +399,14 @@ void OperatorTheory::generateAcyclicConnectedGraphSolution() {
 		auto itLow = transportationSolution.lower_bound(i);
 		auto itUp = transportationSolution.upper_bound(i);
 		int val = 0;
-		for (auto &it = itLow; it != itUp; it++) {
+		for (auto& it = itLow; it != itUp; it++) {
 			val += 1;
 		}
 		rowCells.push_back(val);
-	}	
+	}
 	//columnMap
 	std::multimap<int, int> columnMap;
-	for (auto & it: transportationSolution) {
+	for (auto& it : transportationSolution) {
 		columnMap.insert(std::pair<int, int>(it.second, it.first));
 	}
 	//column scanning for the acyclic connected graph
@@ -356,16 +453,16 @@ void OperatorTheory::generateAcyclicConnectedGraphSolution() {
 	for (int i = 0; i < 6; i++) {
 		std::cout << "\nColumn number : " << i << " Number of contained basic cells : " << columnCells.at(i);
 	}
-	*/	
+	*/
 }
 
-
+//update weaker lower bound
 void OperatorTheory::updateWeakerLowerBound() {
 
 
-
 }
 
+//run cost operator
 void OperatorTheory::runCostOperator() {
 
 }
