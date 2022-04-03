@@ -10,9 +10,14 @@
 #define OPERATORTHEORY_H
 
 struct BasicCell {
-	int rowId;
+	int rowID;
 	int colID;
 	double value;
+};
+
+struct Cell {
+	int rowID;
+	int colID;
 };
 
 enum Direction {
@@ -24,10 +29,10 @@ enum CellType {
 };
 
 struct AllocatedCell {
-	Direction prevDirection;
-	Direction postDirection;
 	BasicCell cellProperty;
 	CellType cellType;
+	Cell prevCell;
+	Cell postCell;
 };
 
 class OperatorTheory {
@@ -48,9 +53,9 @@ public:
 	OperatorTheory(const OperatorTheory& opThr);
 	void generateInitialDualSolution();
 	void scanningRoutine(int p, int q);
-	void updateDualSolution();
-	void findMaxDeltaAndEnteringCell(int p, int q);
-	void generateCycleAndUpdateBasicSolution();
+	void updateDualSolution(double val);
+	double findMaxDeltaAndEnteringCell(int p, int q);
+	void generateCycleAndUpdateBasicSolution(int enteringCellRowId, int enteringCellColID);
 	void generateAcyclicConnectedGraphSolution();
 	void updateWeakerLowerBound();
 	void runCostOperator();

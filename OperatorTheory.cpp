@@ -39,8 +39,8 @@ void OperatorTheory::generateInitialDualSolution() {
 	std::multimap<int, int> rowColMapForBasicSolution;
 	std::multimap<int, int> colRowMapForBasicSolution;
 	for (auto& it : basicSolution) {
-		rowColMapForBasicSolution.insert(std::pair<int, int>(it.rowId, it.colID));
-		colRowMapForBasicSolution.insert(std::pair<int, int>(it.colID, it.rowId));
+		rowColMapForBasicSolution.insert(std::pair<int, int>(it.rowID, it.colID));
+		colRowMapForBasicSolution.insert(std::pair<int, int>(it.colID, it.rowID));
 	}
 	//generate dual solution
 	bool dualflag = false;
@@ -134,25 +134,25 @@ void OperatorTheory::scanningRoutine(int p, int q) {
 	while (!stopFlag) {
 		iter += 1;
 		if (iter == 1) {
-			std::cout << "\nLabel with 1 the columns of basis cells in row p cexept for basis cell (p,q); label row p with 2" << std::endl;
+			//std::cout << "\nLabel with 1 the columns of basis cells in row p cexept for basis cell (p,q); label row p with 2" << std::endl;
 			for (auto it = basicSolution.begin(); it != basicSolution.end(); it++) {
-				if ((*it).rowId == cellRowID && (*it).colID != cellColumnID) {
+				if ((*it).rowID == cellRowID && (*it).colID != cellColumnID) {
 					columnLabel[(*it).colID] = 1;
 					newColumnLabel = true;
 				}
 			}
 			rowLabel[cellRowID] = 2;
 		}
-		std::cout << "\nIf no new columns were labelled 1 on the preceding step go to 5. otherwise go to 2." << std::endl;
+		//std::cout << "\nIf no new columns were labelled 1 on the preceding step go to 5. otherwise go to 2." << std::endl;
 		if (newColumnLabel != true) {
 			break;
 		}
-		std::cout << "\nFor each column labelled with 1, label with 1 each row containing a basis cell in that column unless the row is labelled with 2; then change the label of the column to 2." << std::endl;
+		//std::cout << "\nFor each column labelled with 1, label with 1 each row containing a basis cell in that column unless the row is labelled with 2; then change the label of the column to 2." << std::endl;
 		for (int i = 0; i < size; i++) {
 			if (columnLabel[i] == 1) {
 				for (auto it = basicSolution.begin(); it != basicSolution.end(); ++it) {
-					if ((*it).colID == i && rowLabel[(*it).rowId] != 2) {
-						rowLabel[(*it).rowId] = 1;
+					if ((*it).colID == i && rowLabel[(*it).rowID] != 2) {
+						rowLabel[(*it).rowID] = 1;
 						newRowLabel = true;
 					}
 				}
@@ -160,15 +160,15 @@ void OperatorTheory::scanningRoutine(int p, int q) {
 			}
 		}
 		newColumnLabel = false;
-		std::cout << "\nIf no new rows were labelled with 1 on the preceeding step go to 5. Otherwise go to 4." << std::endl;
+		//std::cout << "\nIf no new rows were labelled with 1 on the preceeding step go to 5. Otherwise go to 4." << std::endl;
 		if (newRowLabel != true) {
 			break;
 		}
-		std::cout << "\nFor each row labelled with 1, label with 1 each column containing a basis cell in that row unless the column is labelled with 2; then change the label of the row to 2. Go to 1." << std::endl;
+		//std::cout << "\nFor each row labelled with 1, label with 1 each column containing a basis cell in that row unless the column is labelled with 2; then change the label of the row to 2. Go to 1." << std::endl;
 		for (int i = 0; i < size; i++) {
 			if (rowLabel[i] == 1) {
 				for (auto it = basicSolution.begin(); it != basicSolution.end(); ++it) {
-					if ((*it).rowId == i && columnLabel[(*it).colID] != 2) {
+					if ((*it).rowID == i && columnLabel[(*it).colID] != 2) {
 						columnLabel[(*it).colID] = 1;
 						newColumnLabel = true;
 					}
@@ -178,44 +178,74 @@ void OperatorTheory::scanningRoutine(int p, int q) {
 		}
 		newRowLabel = false;
 	}
-	std::cout << "\nStop. The set Ip(Jp) consists of the rows(columns) labelled with 2; the set Iq(Jq) consists of the unlabelled rows(columns)." << std::endl;
+	//std::cout << "\nStop. The set Ip(Jp) consists of the rows(columns) labelled with 2; the set Iq(Jq) consists of the unlabelled rows(columns)." << std::endl;
 	for (int i = 0; i < size; i++) {
 		rowLabel[i] == 2 ? Ip.insert(i) : Iq.insert(i);
 		columnLabel[i] == 2 ? Jp.insert(i) : Jq.insert(i);
 	}
+	//show the contents of the different sets
+	std::cout << "\nIp set elements : " << std::endl;
+	for (auto& it : Ip) {
+		std::cout << it << std::endl;
+	}
+	std::cout << "\nIq set elements : " << std::endl;
+	for (auto& it : Iq) {
+		std::cout << it << std::endl;
+	}
+	std::cout << "\nJp set elements : " << std::endl;
+	for (auto& it : Jp) {
+		std::cout << it << std::endl;
+	}
+	std::cout << "\nJq set elements : " << std::endl;
+	for (auto& it : Jq) {
+		std::cout << it << std::endl;
+	}
 }
 
 //update dual variables
-void OperatorTheory::updateDualSolution() {
+void OperatorTheory::updateDualSolution(double val) {
 	//Dual solutions for basis preserving cost operators \sigma Cpq+
 	std::vector<double> transformedRowWiseDualSolution;
 	std::vector<double> transformedColumnWiseDualSolution;
+	for (int i = 0; i < costTableau.size(); i++) {
+		transformedRowWiseDualSolution.push_back(0);
+		transformedColumnWiseDualSolution.push_back(0);
+	}
 	int size = costTableau.size();
-	double delta = 0;
+	double delta = val;
 	//update row dual variables
 	for (int i = 0; i < size; i++) {
 		auto it = Ip.find(i);
 		if (it != Ip.end()) {
-			transformedRowWiseDualSolution[i] = rowWiseDualSolution[i] + delta;
+			transformedRowWiseDualSolution[i] = rowWiseDualSolution.at(i) + delta;
 		}
 		else {
-			transformedRowWiseDualSolution[i] = rowWiseDualSolution[i];
+			transformedRowWiseDualSolution[i] = rowWiseDualSolution.at(i);
 		}
 	}
 	//update column dual variables
 	for (int i = 0; i < size; i++) {
 		auto it = Jp.find(i);
 		if (it != Jp.end()) {
-			transformedColumnWiseDualSolution[i] = columnWiseDualSolution[i] - delta;
+			transformedColumnWiseDualSolution[i] = columnWiseDualSolution.at(i) - delta;
 		}
 		else {
-			transformedColumnWiseDualSolution[i] = columnWiseDualSolution[i];
+			transformedColumnWiseDualSolution[i] = columnWiseDualSolution.at(i);
 		}
+	}
+	std::cout << "\nShow updated dual solutions." << std::endl;
+	std::cout << "\nShow row dual solution : " << std::endl;
+	for (auto it : transformedRowWiseDualSolution) {
+		std::cout << it << std::endl;
+	}
+	std::cout << "\nShow column dual solution : " << std::endl;
+	for (auto it : transformedColumnWiseDualSolution) {
+		std::cout << it << std::endl;
 	}
 }
 
 //find max delta and find the potential entering cells
-void OperatorTheory::findMaxDeltaAndEnteringCell(int p, int q) {
+double OperatorTheory::findMaxDeltaAndEnteringCell(int p, int q) {
 	double maxDelta = INFINITY;
 	int cellRowID = p;
 	int cellColumnID = q;
@@ -237,44 +267,244 @@ void OperatorTheory::findMaxDeltaAndEnteringCell(int p, int q) {
 			}
 		}
 	}
+	std::cout << "\nThe entering cell row id : " << enteringCellRowID << " " << "column id : " << enteringCellColumnID << std::endl;
+	return maxDelta;
 }
 
 //generates cycle or loop containing entering and leaving cells
-void OperatorTheory::generateCycleAndUpdateBasicSolution() {
-	std::map<BasicCell, double> cellToAllocatedValueMap;
-	std::multimap<int, int> basicSolution;
-	int enteringCellRowID = 0;
-	int enteringCellColumnID = 1;
-	int leavingCellRowID = 3;
-	int leavingCellColumnID = 1;
-	std::map<int, std::map<int, double>> solutionToSupplyMap;
-	std::map<int, std::map<int, double>> getterBasicCells;
-	std::map<int, std::map<int, double>> giverBasicCells;
-	solutionToSupplyMap[0][3] = 1;
-	solutionToSupplyMap[1][0] = 1;
-	solutionToSupplyMap[1][3] = 0;
-	solutionToSupplyMap[2][4] = 1;
-	solutionToSupplyMap[2][5] = 0;
-	solutionToSupplyMap[3][1] = 1;
-	solutionToSupplyMap[3][4] = 0;
-	solutionToSupplyMap[4][0] = 0;
-	solutionToSupplyMap[4][5] = 1;
-	solutionToSupplyMap[5][2] = 1;
-	solutionToSupplyMap[5][4] = 0;
-	//This is how we can loop over the two dimensional map
-	std::cout << "\nThe basic solution is : " << std::endl;
-	for (auto it = solutionToSupplyMap.begin(); it != solutionToSupplyMap.end(); it++) {
-		for (auto ptr = it->second.begin(); ptr != it->second.end(); ptr++) {
-			std::cout << (*it).first << " " << (*ptr).first << " " << (*ptr).second << std::endl;
+void OperatorTheory::generateCycleAndUpdateBasicSolution(int enCellRowId, int enCellColID) {
+	std::multimap<int, int> rowColMapForBasicSolution;
+	std::multimap<int, int> colRowMapForBasicSolution;
+	std::map<int, std::map<int, double>> cellToValueMap;
+	for (auto& it : basicSolution) {
+		rowColMapForBasicSolution.insert(std::pair<int, int>(it.rowID, it.colID));
+		colRowMapForBasicSolution.insert(std::pair<int, int>(it.colID, it.rowID));
+		cellToValueMap[it.rowID][it.colID] = it.value;
+	}
+	std::list<AllocatedCell> cycleOfAllocatedCells;
+	int enteringCellRowID = enCellRowId;
+	int enteringCellColumnID = enCellColID;
+	cellToValueMap[enteringCellRowID][enteringCellColumnID] = 0.0;
+	rowColMapForBasicSolution.insert(std::pair<int, int>(enteringCellRowID, enteringCellColumnID));
+	colRowMapForBasicSolution.insert(std::pair<int, int>(enteringCellColumnID, enteringCellRowID));
+	int leavingCellRowID = 0;
+	int leavingCellColumnID = 0;
+	//Entering cell cofig as allocated cell
+	AllocatedCell enteringCell = AllocatedCell();
+	enteringCell.cellProperty.rowID = enteringCellRowID;
+	enteringCell.cellProperty.colID = enteringCellColumnID;
+	enteringCell.cellProperty.value = 0.0;
+	enteringCell.cellType = Getter;
+	enteringCell.prevCell.rowID = enteringCellRowID;
+	enteringCell.prevCell.colID = enteringCellColumnID;
+	enteringCell.postCell.rowID = NULL;
+	enteringCell.postCell.colID = NULL;
+	AllocatedCell currentCell = enteringCell;
+	bool cycleComplete = false;
+	//int counter = 0;
+	//std::cout << "\nRow id : " << currentCell.cellProperty.rowID << " Column id : " << currentCell.cellProperty.colID << " Cell type : " << currentCell.cellType << std::endl;
+	while (!cycleComplete) {
+		if ((currentCell.prevCell.rowID == currentCell.cellProperty.rowID) && (currentCell.prevCell.colID == currentCell.cellProperty.colID)) {
+			//searach row 
+			std::list<int> listOfColumns;
+			std::list<int> listOfRows;
+			for (auto it = rowColMapForBasicSolution.lower_bound(currentCell.cellProperty.rowID); it != rowColMapForBasicSolution.upper_bound(currentCell.cellProperty.rowID); it++) {
+				if ((*it).second != currentCell.cellProperty.colID) {
+					listOfColumns.push_back((*it).second);
+				}
+			}
+			// search column
+			for (auto it = colRowMapForBasicSolution.lower_bound(currentCell.cellProperty.colID); it != colRowMapForBasicSolution.upper_bound(currentCell.cellProperty.colID); it++) {
+				if ((*it).second != currentCell.cellProperty.rowID) {
+					listOfRows.push_back((*it).second);
+				}
+			}
+			//choose post cell and update current cell
+			if (listOfRows.size() <= listOfColumns.size()) {
+				double val = NULL;
+				for (auto it : listOfRows) {
+					val = cellToValueMap[it][currentCell.cellProperty.colID];
+					if (val == 1.0) {
+						currentCell.postCell.rowID = it;
+						currentCell.postCell.colID = currentCell.cellProperty.colID;
+						break;
+					}
+				}
+			}
+			else {
+				double val = NULL;
+				for (auto it : listOfColumns) {
+					val = cellToValueMap[currentCell.cellProperty.rowID][it];
+					if (val == 1.0) {
+						currentCell.postCell.rowID = currentCell.cellProperty.rowID;
+						currentCell.postCell.colID = it;
+						break;
+					}
+				}
+			}
+			//populate post cell as an allocated cell
+			AllocatedCell newAllocatedCell = AllocatedCell();
+			newAllocatedCell.cellProperty.rowID = currentCell.postCell.rowID;
+			newAllocatedCell.cellProperty.colID = currentCell.postCell.colID;
+			newAllocatedCell.cellProperty.value = 1.0;
+			newAllocatedCell.cellType = Giver;
+			newAllocatedCell.prevCell.rowID = currentCell.cellProperty.rowID;
+			newAllocatedCell.prevCell.colID = currentCell.cellProperty.colID;
+			newAllocatedCell.postCell.rowID = NULL;
+			newAllocatedCell.postCell.colID = NULL;
+			cycleOfAllocatedCells.push_back(currentCell);
+			currentCell = newAllocatedCell;
+			/*
+			counter += 1;
+			std::cout << "\nFirst counter no: " << counter << std::endl;
+			std::cout << "\nRow id : " << currentCell.cellProperty.rowID << " Column id : " << currentCell.cellProperty.colID << " Cell type : " << currentCell.cellType << std::endl;
+			*/
+		}
+		else if ((currentCell.prevCell.rowID == currentCell.cellProperty.rowID) && (currentCell.prevCell.colID != currentCell.cellProperty.colID)) {
+			int rowId = NULL;
+			std::vector<int> rowList;
+			for (auto it = colRowMapForBasicSolution.lower_bound(currentCell.cellProperty.colID); it != colRowMapForBasicSolution.upper_bound(currentCell.cellProperty.colID); it++) {
+				if (((*it).second != currentCell.cellProperty.rowID) && ((*it).second == enteringCellRowID)) {
+					rowId = enteringCellRowID;
+				}
+			}
+			if (rowId == NULL) {
+				for (auto it = colRowMapForBasicSolution.lower_bound(currentCell.cellProperty.colID); it != colRowMapForBasicSolution.upper_bound(currentCell.cellProperty.colID); it++) {
+					if ((*it).second != currentCell.cellProperty.rowID) {
+						rowList.push_back((*it).second);
+					}
+				}
+				if (rowList.size() == 0) {
+					//needs to implement later
+				}
+				else if (rowList.size() == 1) {
+					rowId = rowList.at(0);
+				}
+				else {
+					if (currentCell.cellType == Giver) {
+						double val = NULL;
+						for (auto it : rowList) {
+							val = cellToValueMap[it][currentCell.cellProperty.colID];
+							if (val == 0.0) {
+								rowId = it;
+								break;
+							}
+						}
+
+					}
+					else if (currentCell.cellType == Getter) {
+						double val = NULL;
+						for (auto it : rowList) {
+							val = cellToValueMap[it][currentCell.cellProperty.colID];
+							if (val == 1.0) {
+								rowId = it;
+								break;
+							}
+						}
+					}
+				}
+			}
+			currentCell.postCell.colID = currentCell.cellProperty.colID;
+			currentCell.postCell.rowID = rowId;
+			if ((currentCell.postCell.rowID == enteringCellRowID) && (currentCell.postCell.colID == enteringCellColumnID)) {
+				cycleComplete = true;
+				cycleOfAllocatedCells.push_back(currentCell);
+			}
+			else {
+				//populate new allocated cell
+				AllocatedCell newAllocatedCell = AllocatedCell();
+				newAllocatedCell.cellProperty.rowID = currentCell.postCell.rowID;
+				newAllocatedCell.cellProperty.colID = currentCell.postCell.colID;
+				newAllocatedCell.cellProperty.value = cellToValueMap[newAllocatedCell.cellProperty.rowID][newAllocatedCell.cellProperty.colID];
+				currentCell.cellType == Getter ? newAllocatedCell.cellType = Giver : newAllocatedCell.cellType = Getter;
+				newAllocatedCell.prevCell.rowID = currentCell.cellProperty.rowID;
+				newAllocatedCell.prevCell.colID = currentCell.cellProperty.colID;
+				newAllocatedCell.postCell.rowID = NULL;
+				newAllocatedCell.postCell.colID = NULL;
+				cycleOfAllocatedCells.push_back(currentCell);
+				currentCell = newAllocatedCell;
+			}
+			/*
+			counter += 1;
+			std::cout << "\nMiddle counter no: " << counter << std::endl;
+			std::cout << "\nRow id : " << currentCell.cellProperty.rowID << " Column id : " << currentCell.cellProperty.colID << " Cell type : " << currentCell.cellType << std::endl;
+			*/
+		}
+		else if ((currentCell.prevCell.colID == currentCell.cellProperty.colID) && (currentCell.prevCell.rowID != currentCell.cellProperty.rowID)) {
+			int colId = NULL;
+			std::vector<int> colList;
+			for (auto it = rowColMapForBasicSolution.lower_bound(currentCell.cellProperty.rowID); it != rowColMapForBasicSolution.upper_bound(currentCell.cellProperty.rowID); it++) {
+				if (((*it).second != currentCell.cellProperty.colID) && ((*it).second == enteringCellColumnID)) {
+					colId = enteringCellColumnID;
+				}
+			}
+			if (colId == NULL) {
+				for (auto it = rowColMapForBasicSolution.lower_bound(currentCell.cellProperty.rowID); it != rowColMapForBasicSolution.upper_bound(currentCell.cellProperty.rowID); it++) {
+					if ((*it).second != currentCell.cellProperty.colID) {
+						colList.push_back((*it).second);
+					}
+				}
+				if (colList.size() == 0) {
+					//needs to implement later
+				}
+				else if (colList.size() == 1) {
+					colId = colList.at(0);
+				}
+				else {
+					if (currentCell.cellType == Giver) {
+						double val = NULL;
+						for (auto it : colList) {
+							val = cellToValueMap[currentCell.cellProperty.rowID][it];
+							if (val == 0.0) {
+								colId = it;
+								break;
+							}
+						}
+
+					}
+					else if (currentCell.cellType == Getter) {
+						double val = NULL;
+						for (auto it : colList) {
+							val = cellToValueMap[currentCell.cellProperty.rowID][it];
+							if (val == 1.0) {
+								colId = it;
+								break;
+							}
+						}
+					}
+				}
+			}
+			currentCell.postCell.colID = colId;
+			currentCell.postCell.rowID = currentCell.cellProperty.rowID;
+			if ((currentCell.postCell.rowID == enteringCellRowID) && (currentCell.postCell.colID == enteringCellColumnID)) {
+				cycleComplete = true;
+				cycleOfAllocatedCells.push_back(currentCell);
+			}
+			else {
+				//populate new allocated cell
+				AllocatedCell newAllocatedCell = AllocatedCell();
+				newAllocatedCell.cellProperty.rowID = currentCell.postCell.rowID;
+				newAllocatedCell.cellProperty.colID = currentCell.postCell.colID;
+				newAllocatedCell.cellProperty.value = cellToValueMap[newAllocatedCell.cellProperty.rowID][newAllocatedCell.cellProperty.colID];
+				currentCell.cellType == Getter ? newAllocatedCell.cellType = Giver : newAllocatedCell.cellType = Getter;
+				newAllocatedCell.prevCell.rowID = currentCell.cellProperty.rowID;
+				newAllocatedCell.prevCell.colID = currentCell.cellProperty.colID;
+				newAllocatedCell.postCell.rowID = NULL;
+				newAllocatedCell.postCell.colID = NULL;
+				cycleOfAllocatedCells.push_back(currentCell);
+				currentCell = newAllocatedCell;
+			}
+			/*
+			counter += 1;
+			std::cout << "\nLast counter no: " << counter << std::endl;
+			std::cout << "\nRow id : " << currentCell.cellProperty.rowID << " Column id : " << currentCell.cellProperty.colID << " Cell type : " << currentCell.cellType << std::endl;
+			*/
 		}
 	}
-	//now lets form a cycle taking entering cell and leaving cell of the basic solution.
-	std::cout << "\nThe value of cell : (1, 0) is : " << solutionToSupplyMap[1][0] << std::endl;
-	//solutionToSupplyMap[1][0] = 0;
-	//now lets form a cycle taking entering cell and leaving cell of the basic solution.
-	//std::cout << "\nThe value of cell : (1, 0) is : " << solutionToSupplyMap[1][0] << std::endl;
-	//
-
+	std::cout << "\nShow the cycle : " << std::endl;
+	for (auto& it : cycleOfAllocatedCells) {
+		std::cout << "\nrow id : " << it.cellProperty.rowID << " column id : " << it.cellProperty.colID << " cell type : " << it.cellType << " allocated value : " << it.cellProperty.value << std::endl;
+	}
 }
 
 //generates basic solution equivalent to the basic solution of transportation problem
