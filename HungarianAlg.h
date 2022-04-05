@@ -11,6 +11,15 @@
 //The Hungarian algorithm solves assignment problem which is a relaxation of the traveling salesman problem.
 //Hungarian algorithm generates either a TSP tour or a number of subtours.
 
+struct IntersectionPoint {
+	int row;
+	int column;
+	IntersectionPoint(int a, int b) {
+		row = a;
+		column = b;
+	}
+};
+
 class HungarianAlg {
 private:
 	double reducedCost;
@@ -19,14 +28,6 @@ private:
 	double finalSolCost;
 	bool tspOptimal;
 	int reducedCostMatrixSize;
-	struct IntersectionPoint {
-		int row;
-		int column;
-		IntersectionPoint(int a, int b) {
-			row = a;
-			column = b;
-		}
-	};
 	std::map<int, int> boxPoints;
 	bool assignmentOptimal;
 	std::list<std::vector<int>> listOfRoutes;

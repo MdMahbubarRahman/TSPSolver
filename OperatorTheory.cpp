@@ -509,93 +509,31 @@ void OperatorTheory::generateCycleAndUpdateBasicSolution(int enCellRowId, int en
 
 //generates basic solution equivalent to the basic solution of transportation problem
 void OperatorTheory::generateAcyclicConnectedGraphSolution() {
-	std::vector<std::vector<double>> costTableau;
+	int size = costTableau.size();
 	std::multimap<int, int> assignmentSolution;
 	std::multimap<int, int> transportationSolution;
-	//Need to generate acyclic connected graph which would represent the basic solution 
-	//of the equivalent transportation problem.
-	//populate the cost tableau
-	std::vector<double> rowVec;
-	rowVec.push_back(100000);
-	rowVec.push_back(27);
-	rowVec.push_back(43);
-	rowVec.push_back(16);
-	rowVec.push_back(30);
-	rowVec.push_back(26);
-	costTableau.push_back(rowVec);
-	rowVec.clear();
-	rowVec.push_back(7);
-	rowVec.push_back(100000);
-	rowVec.push_back(16);
-	rowVec.push_back(1);
-	rowVec.push_back(30);
-	rowVec.push_back(25);
-	costTableau.push_back(rowVec);
-	rowVec.clear();
-	rowVec.push_back(20);
-	rowVec.push_back(13);
-	rowVec.push_back(100000);
-	rowVec.push_back(35);
-	rowVec.push_back(5);
-	rowVec.push_back(0);
-	costTableau.push_back(rowVec);
-	rowVec.clear();
-	rowVec.push_back(21);
-	rowVec.push_back(16);
-	rowVec.push_back(25);
-	rowVec.push_back(100000);
-	rowVec.push_back(18);
-	rowVec.push_back(18);
-	costTableau.push_back(rowVec);
-	rowVec.clear();
-	rowVec.push_back(12);
-	rowVec.push_back(46);
-	rowVec.push_back(27);
-	rowVec.push_back(48);
-	rowVec.push_back(100000);
-	rowVec.push_back(5);
-	costTableau.push_back(rowVec);
-	rowVec.clear();
-	rowVec.push_back(23);
-	rowVec.push_back(5);
-	rowVec.push_back(5);
-	rowVec.push_back(9);
-	rowVec.push_back(5);
-	rowVec.push_back(100000);
-	costTableau.push_back(rowVec);
-	rowVec.clear();
-	//show the cost tableau
-	for (auto& it : costTableau) {
-		for (auto iter : it) {
-			std::cout << " " << iter << " ";
-		}
-		std::cout << "\n";
-	}
-
-	//populate the assignment solution
+	std::cout << "\nNeed to generate acyclic connected graph which would represent the basic solution of the equivalent transportation problem." << std::endl;
+	std::cout << "\nPopulate the assignment solution." << std::endl;
 	assignmentSolution.insert(std::pair<int, int>(0, 3));
 	assignmentSolution.insert(std::pair<int, int>(1, 0));
 	assignmentSolution.insert(std::pair<int, int>(2, 4));
 	assignmentSolution.insert(std::pair<int, int>(3, 1));
 	assignmentSolution.insert(std::pair<int, int>(4, 5));
 	assignmentSolution.insert(std::pair<int, int>(5, 2));
-	//for (auto & it: assignmentSolution) {
-	//	std::cout << "\n" << it.first << " " << it.second << std::endl;
-	//}
-	//populate transportation solution with assignment solutions
+	std::cout << "\nPopulate transportation solution with assignment solutions." << std::endl;
 	transportationSolution = assignmentSolution;
-	//row scanning for the acyclic connected graph
+	std::cout << "Row scanning for the acyclic connected graph." << std::endl;
 	std::vector<int> columnCells;
 	std::vector<int> rowCells;
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; i < size; i++) {
 		columnCells.push_back(1);
 	}
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; i < size; i++) {
 		auto col = assignmentSolution.find(i);
 		double val1 = INFINITY;
 		double val2 = 0;
 		int indx = 0;
-		for (int j = 1; j < 6; j++) {
+		for (int j = 1; j < size; j++) {
 			auto it = assignmentSolution.find(i);
 			j != i ? val2 = costTableau[j][(*it).second] : val2 = INFINITY;
 			if (val2 < val1) {
@@ -621,11 +559,11 @@ void OperatorTheory::generateAcyclicConnectedGraphSolution() {
 	}
 	//total number of cell assigned to the basic solution
 	int numOfBasicCells = 0;
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; i < size; i++) {
 		numOfBasicCells += columnCells.at(i);
 	}
 	//populate rowcell vector
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; i < size; i++) {
 		auto itLow = transportationSolution.lower_bound(i);
 		auto itUp = transportationSolution.upper_bound(i);
 		int val = 0;
@@ -640,9 +578,9 @@ void OperatorTheory::generateAcyclicConnectedGraphSolution() {
 		columnMap.insert(std::pair<int, int>(it.second, it.first));
 	}
 	//column scanning for the acyclic connected graph
-	if (numOfBasicCells < 11) {
+	if (numOfBasicCells < (2 * size - 1)) {
 		std::cout << "\nStart of column scanning" << std::endl;
-		for (int i = 0; i < 6; i++) {
+		for (int i = 0; i < size; i++) {
 			if (columnCells.at(i) == 1) {
 				//find row ID, You still has column ID
 				auto it = columnMap.find(i);
@@ -651,7 +589,7 @@ void OperatorTheory::generateAcyclicConnectedGraphSolution() {
 					int col = 0;
 					double val3 = INFINITY;
 					double val4 = 0;
-					for (int k = 0; k < 6; k++) {
+					for (int k = 0; k < size; k++) {
 						k != i ? val4 = costTableau[rowID][k] : val4 = INFINITY;
 						if (val4 < val3) {
 							val3 = val4;
@@ -663,7 +601,7 @@ void OperatorTheory::generateAcyclicConnectedGraphSolution() {
 					columnCells[i] = columnCells.at(i) + 1;
 					rowCells[rowID] = rowCells.at(rowID) + 1;
 					numOfBasicCells += 1;
-					if (numOfBasicCells == 11) {
+					if (numOfBasicCells == (2 * size - 1)) {
 						break;
 					}
 				}
@@ -676,11 +614,11 @@ void OperatorTheory::generateAcyclicConnectedGraphSolution() {
 	}
 	/*
 	//print rows with number of contained basic cells
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; i < size; i++) {
 		std::cout << "\nRow number : " << i << " Number of contained basic cells : " << rowCells.at(i);
 	}
 	//print columns with number of contained basic cells
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; i < size; i++) {
 		std::cout << "\nColumn number : " << i << " Number of contained basic cells : " << columnCells.at(i);
 	}
 	*/
