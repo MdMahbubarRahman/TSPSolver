@@ -11,6 +11,7 @@
 //The Hungarian algorithm solves assignment problem which is a relaxation of the traveling salesman problem.
 //Hungarian algorithm generates either a TSP tour or a number of subtours.
 
+
 struct IntersectionPoint {
 	int row;
 	int column;
@@ -19,6 +20,7 @@ struct IntersectionPoint {
 		column = b;
 	}
 };
+
 
 class HungarianAlg {
 private:
@@ -38,7 +40,7 @@ private:
 	std::vector<std::vector<double>> reducedCostMatrix;
 public:
 	HungarianAlg();
-	HungarianAlg(const HungarianAlg & hunAlg);
+	HungarianAlg(const HungarianAlg& hunAlg);
 	HungarianAlg(std::vector<int> initialTsp, std::vector<std::vector<double>> costMatrix);
 	void performRowColumnReduction();
 	void rowScanning(std::set<int>& coveredRows, std::set<int>& coveredColumns, std::map<int, int>& boxPoints);
@@ -47,11 +49,12 @@ public:
 	int uncoveredZeroScanning(std::set<int>& coveredRows, std::set<int>& coveredColumns);
 	void coverMinimumValueAssignmentsAndCheckOptimality(bool& assignmentOptimal, std::set<int>& coveredRows, std::set<int>& coveredColumns, std::map<int, int>& boxPoints, std::list<IntersectionPoint>& twiceCoveredPoints);
 	void performRowColumnReductionForUncoveredCells(bool& assignmentOptimal, std::set<int>& coveredRows, std::set<int>& coveredColumns, std::map<int, int>& boxPoints, std::list<IntersectionPoint>& twiceCoveredPoints);
-	//void generateUpperBoundTsp(std::list<std::vector<int>> listOfRoutes);
 	void populateListOfRoutes(std::map<int, int> boxPoints);
-	void checkListOfRoutes(std::map<int, int> boxPoints, std::list<std::vector<int>>& routeList);
 	void showAssignmentSolution();
+	std::map<int, int> getAssignmentSolution();
+	std::list<std::vector<int>> getListOfRoutes();
 	void runHungarianAlg();
 };
 
 #endif
+
