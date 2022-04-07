@@ -42,6 +42,7 @@ private:
 	std::set<int> Jp;
 	std::set<int> Jq;
 	std::list<BasicCell> basicSolution;
+	std::list<BasicCell> tspBasicSolution;
 	std::vector<double> rowWiseDualSolution;
 	std::vector<double> columnWiseDualSolution;
 	std::vector<std::vector<double>> costTableau;
@@ -56,7 +57,6 @@ public:
 	void updateDualSolution(double val);
 	double findMaxDeltaAndEnteringCell(int p, int q);
 	void generateCycleAndUpdateBasicSolution(int enteringCellRowId, int enteringCellColID);
-	void generateAcyclicConnectedGraphSolution();
 	void updateWeakerLowerBound();
 	void runCostOperator();
 };
