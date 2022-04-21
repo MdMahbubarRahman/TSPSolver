@@ -15,50 +15,9 @@ enum BBSolverStatus {
 	Optimal, SubOptimal, LocalOptimal, TerminatedWithErrors
 };
 
-enum CostOperatorStatus {
-	CostOperatorTerminatedSuccessfully, CostOperatorTerminatedWithErrors
-};
-
-enum HungarianAlgStatus {
-	HungarianAlgTerminatedSuccessfully, HungarianAlgTerminatedWithErrors
-};
-
-struct RootNode {
-	int nodeIndex;
-	bool isFinalSolutionATour;
-	double initialWeakerLowerBound;
-	double finalWeakerLowerBound;
-	HungarianAlgStatus hungarianAlgStatus;
-	std::vector<int> listOfCities;
-	std::vector<std::vector<double>> initialCostTableau;
-	std::vector<std::vector<double>> finalCostCostTableau;
-	std::list<BasicCell> initialSolution;
-	std::list<BasicCell> finalSolution;
-};
-
-struct Node {
-	int nodeIndex;
-	int parentNodeIndex;
-	bool isFinalSolutionATour;
-	double initialWeakerLowerBound;
-	double finalWeakerLowerBound;
-	Cell branchOnCell;
-	CostOperatorStatus costOperatorStatus;
-	std::vector<int> listOfCities;
-	std::vector<std::vector<double>> initialCostTableau;
-	std::vector<std::vector<double>> finalCostCostTableau;
-	std::list<BasicCell> initialSolution;
-	std::list<BasicCell> finalSolution;
-	std::vector<double> initialRowDualSolution;
-	std::vector<double> initialColumnDualSolution;
-	std::vector<double> finalRowDualSolution;
-	std::vector<double> finalColumnDualSolution;
-	std::list<Node> childNodes;
-};
-
 struct TourSolution {
-	std::list<BasicCell> tourSolution;
 	double objValue;
+	std::vector<int> tourSolution;
 };
 
 struct Incumbent {
@@ -70,51 +29,51 @@ struct Incumbent {
 struct TSPSolution {
 	double cost;
 	std::vector<int> tour;
-	BBSolverStatus status;
 };
 
 struct BBTree {
-	double totalTime;
-	double maxTimeLimit;
-	BBSolverStatus status;
-	Incumbent incumbent;
+	int currentNumOfNodes;
 	int numOfTourSolution;
-	std::list<TourSolution> tourSolutions;
 	int numOfNodePrunedByBound;
 	int numOfNodePrunedByIntegrality;
 	int numOfNodePrunedWithErrorsOrInfeasibility;
+	std::list<Node> branchNodes;
+};
+
+//Branch and Bound Solver for solving traveling salesman problem
+class BranchAndBoundSolver {
+private:
 	double lowerBound;
 	double weakerLowerBound;
 	double upperBound;
-	std::list<Node> branchNodes;
-	int currentNumOfNodes;
-};
-
-//Branch and Bound Solver for solvinig traveling salesman problem
-class BranchAndBoundSolver {
-private:
+	double totalTime;
+	double maxTimeLimit;
+	BBTree bbTree;
+	BBSolverStatus bStatus;
+	Incumbent incumbent;
+	std::list<TourSolution> tourSolutions;
+	TSPSolution tspSolution;
 	std::vector<std::vector<double>> costTableau;
 	std::vector<int> oldListOfCities;
 	std::vector<int> newListOfCities;
 	std::map<int, int> newCityToOldCityMap;
-	std::vector<BasicCell> assignmentSolution;
-	std::vector<BasicCell> transportationSolution;
+	std::map<int, int> assignmentSolution;
+	std::list<BasicCell> transportationBasicSolution;
 	std::list<std::vector<int>> routeLists;
-	TSPSolution tspSolution;
-	BBTree bbTree;
 public:
 	BranchAndBoundSolver();
 	BranchAndBoundSolver(std::vector<int> initialTourOfCities, std::vector<std::vector<double>> wholeCostMatrix);
 	BranchAndBoundSolver(const BranchAndBoundSolver& depthFirstBBSolver);
 	void solveAssignmentProblem();
 	void generateBasicTransportationSolution();
-	void solveTransportationProblem();
+	void initBranchAndBoundTree();
+	void solveNodeByCostOperator(Node node);
 	TSPSolution getTSPSolution();
+	void pruneNodeByIntegrality();
+	Node selectNodeBasedOnBestWeakerLowerBound();
 	void runBranchAndBoundSolver();
 };
 
 #endif
-
-
 
 

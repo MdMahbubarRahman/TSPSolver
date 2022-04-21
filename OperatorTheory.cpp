@@ -3,11 +3,41 @@
 //default constructor
 OperatorTheory::OperatorTheory() {
 	std::cout << "\nThe default constructor has been called!" << std::endl;
+	nodeIndex = 0;
+	parentNodeIndex = 0;
+	isSolutionATour = false;
+	weakerLowerBound = -INFINITY;
+	lowerBound = -INFINITY;
+	delta = 0.0;
+}
+
+OperatorTheory::OperatorTheory(Node node) {
+	nodeIndex = node.nodeIndex;
+	parentNodeIndex = node.parentNodeIndex;
+	isSolutionATour = node.isSolutionATour;
+	weakerLowerBound = node.weakerLowerBound;
+	lowerBound = node.lowerBound;
+	delta = node.delta;
+	Ip = node.Ip;
+	Iq = node.Iq;
+	Jp = node.Jp;
+	Jq = node.Jq;
+	branchOnCell = node.branchOnCell;
+	basicSolution = node.basicSolution;
+	rowWiseDualSolution = node.rowDualSolution;
+	columnWiseDualSolution = node.columnDualSolution;
+	costTableau = node.costTableau;
 }
 
 //default operator to perform cost operator from tsp solution
 OperatorTheory::OperatorTheory(std::list<BasicCell> basicSol, std::vector<std::vector<double>> cTableau) {
 	//populate all other values using these two input values
+	nodeIndex = 0;
+	parentNodeIndex = 0;
+	isSolutionATour = false;
+	weakerLowerBound = -INFINITY;
+	lowerBound = -INFINITY;
+	delta = 0.0;
 	basicSolution = basicSol;
 	costTableau = cTableau;
 	for (int i = 0; i < costTableau.size(); i++) {
@@ -19,6 +49,12 @@ OperatorTheory::OperatorTheory(std::list<BasicCell> basicSol, std::vector<std::v
 //constructor
 OperatorTheory::OperatorTheory(std::list<BasicCell> basicSol, std::vector<double> rowWiseDualSol, std::vector<double> columnWiseDualSol, std::vector<std::vector<double>> cTableau) {
 	std::cout << "\nThe operator theory constructor has been called!" << std::endl;
+	nodeIndex = 0;
+	parentNodeIndex = 0;
+	isSolutionATour = false;
+	weakerLowerBound = -INFINITY;
+	lowerBound = -INFINITY;
+	delta = 0.0;
 	basicSolution = basicSol;
 	rowWiseDualSolution = rowWiseDualSol;
 	columnWiseDualSolution = columnWiseDualSol;
@@ -28,10 +64,23 @@ OperatorTheory::OperatorTheory(std::list<BasicCell> basicSol, std::vector<double
 //copy constructor
 OperatorTheory::OperatorTheory(const OperatorTheory& opThr) {
 	std::cout << "\nThe copy constructor has been called!" << std::endl;
+	nodeIndex = opThr.nodeIndex;
+	parentNodeIndex = opThr.parentNodeIndex;
+	isSolutionATour = opThr.isSolutionATour;
+	weakerLowerBound = opThr.weakerLowerBound;
+	lowerBound = opThr.lowerBound;
+	delta = opThr.delta;
+	Ip = opThr.Ip;
+	Iq = opThr.Iq;
+	Jp = opThr.Jp;
+	Jq = opThr.Jq;
+	branchOnCell = opThr.branchOnCell;
 	basicSolution = opThr.basicSolution;
 	rowWiseDualSolution = opThr.rowWiseDualSolution;
 	columnWiseDualSolution = opThr.columnWiseDualSolution;
 	costTableau = opThr.costTableau;
+	childNodes = opThr.childNodes;
+	cStatus = opThr.cStatus;
 }
 
 //generate initial dual solution
@@ -245,7 +294,7 @@ void OperatorTheory::updateDualSolution(double val) {
 }
 
 //find max delta and find the potential entering cells
-double OperatorTheory::findMaxDeltaAndEnteringCell(int p, int q) {
+void OperatorTheory::findMaxDeltaAndEnteringCell(int p, int q) {
 	double maxDelta = INFINITY;
 	int cellRowID = p;
 	int cellColumnID = q;
@@ -268,7 +317,11 @@ double OperatorTheory::findMaxDeltaAndEnteringCell(int p, int q) {
 		}
 	}
 	std::cout << "\nThe entering cell row id : " << enteringCellRowID << " " << "column id : " << enteringCellColumnID << std::endl;
-	return maxDelta;
+	delta = maxDelta;
+	Cell cell = Cell();
+	cell.rowID = enteringCellRowID;
+	cell.colID = enteringCellColumnID;
+	enteringCell = cell;
 }
 
 //generates cycle or loop containing entering and leaving cells
@@ -505,17 +558,185 @@ void OperatorTheory::generateCycleAndUpdateBasicSolution(int enCellRowId, int en
 	for (auto& it : cycleOfAllocatedCells) {
 		std::cout << "\nrow id : " << it.cellProperty.rowID << " column id : " << it.cellProperty.colID << " cell type : " << it.cellType << " allocated value : " << it.cellProperty.value << std::endl;
 	}
+	cycleOfCells = cycleOfAllocatedCells;
 }
 
+void OperatorTheory::generateListOfRoutes(std::map<int, int> boxPoints) {
+	std::vector<int> route;
+	int sourceNode = 0;
+	int destinationNode = 0;
+	int routeStartNode = 0;
+	std::map<int, int> newAssignments;
+	newAssignments = boxPoints;
+	int i = 0;
+	while (!newAssignments.empty()) {
+		if (i == 0) {
+			auto it = newAssignments.begin();
+			routeStartNode = (*it).first;
+			destinationNode = (*it).second;
+			route.push_back(destinationNode);
+			newAssignments.erase(routeStartNode);
+			i += 1;
+		}
+		else {
+			sourceNode = destinationNode;
+			destinationNode = newAssignments[sourceNode];
+			route.push_back(destinationNode);
+			newAssignments.erase(sourceNode);
+			if (destinationNode == routeStartNode) {
+				clistOfRoutes.push_back(route);
+				route.clear();
+				i = 0;
+			}
+			else {
+				i += 1;
+			}
+		}
+	}
+}
 
 //update weaker lower bound
-void OperatorTheory::updateWeakerLowerBound() {
+void OperatorTheory::runCostOperatorForGeneratingRootNodes() {
+	generateInitialDualSolution();
+	std::map<int, int> boxPoints;
+	for (auto& it : basicSolution) {
+		if (it.value == 1.0) {
+			boxPoints.insert(std::pair<int, int>(it.rowID, it.colID));
+		}
+	}
+	generateListOfRoutes(boxPoints);
+	updateBounds(boxPoints);
+	//generate nodes to start branch and bound search
+	std::vector<int> route;
+	if (clistOfRoutes.size() > 1) {
+		for (auto& it : clistOfRoutes) {
+			route = it;
+			break;
+		}
+		isSolutionATour = false;
+		std::map<int, int> cellMaps;
+		for (int i = 0; i < route.size() - 1; i++) {
+			cellMaps.insert(std::pair<int, int>(route.at(i), route.at(i + 1)));
+		}
+		//create nodes
+		double nodeNum = parentNodeIndex;
+		for (auto& it : cellMaps) {
+			nodeNum += 1;
+			Cell cell = Cell();
+			cell.rowID = it.first;
+			cell.colID = it.second;
+			branchOnCell = cell;
+			scanningRoutine(branchOnCell.rowID, branchOnCell.colID);
+			findMaxDeltaAndEnteringCell(branchOnCell.rowID, branchOnCell.colID);
+			double weakerLB = 0;
+			double lb = 0;
+			weakerLB = lowerBound + delta;
+			lb = lowerBound;
+			Node node = Node();
+			node.nodeIndex = nodeNum;
+			node.parentNodeIndex = parentNodeIndex;
+			node.isSolutionATour = false;
+			node.weakerLowerBound = weakerLB;
+			node.lowerBound = lb;
+			node.delta = delta;
+			node.Ip = Ip;
+			node.Iq = Iq;
+			node.Jp = Jp;
+			node.Jq = Jq;
+			node.branchOnCell = branchOnCell;
+			node.enteringCell = enteringCell;
+			node.basicSolution = basicSolution;
+			node.rowDualSolution = rowWiseDualSolution;
+			node.columnDualSolution = columnWiseDualSolution;
+			node.costTableau = costTableau;
+			childNodes.push_back(node);
+		}
+	}
+	else if (clistOfRoutes.size() == 1) {
+		Node node = Node();
+		node.nodeIndex = nodeIndex;
+		node.parentNodeIndex = parentNodeIndex;
+		node.isSolutionATour = true;
+		node.weakerLowerBound = weakerLowerBound;
+		node.lowerBound = lowerBound;
+		node.delta = 0;
+		node.basicSolution = basicSolution;
+		node.rowDualSolution = rowWiseDualSolution;
+		node.columnDualSolution = columnWiseDualSolution;
+		node.costTableau = costTableau;
+		childNodes.push_back(node);
+	}
+}
 
-
+//update bounds
+void OperatorTheory::updateBounds(std::map<int, int> bPoints) {
+	double cost = 0;
+	std::map<int, int> boxPoints = bPoints;
+	for (auto& it : boxPoints) {
+		cost += costTableau[it.first][it.second];
+	}
+	weakerLowerBound = cost;
+	lowerBound = cost;
 }
 
 //run cost operator
-void OperatorTheory::runCostOperator() {
-
+void OperatorTheory::runCostOperatorForSolvingANode() {
+	generateCycleAndUpdateBasicSolution(enteringCell.rowID, enteringCell.colID);
+	//need works
 }
+
+std::list<Node> OperatorTheory::getChildNodes() {
+	return childNodes;
+}
+
+void OperatorTheory::showChildNodes() {
+	std::cout << "\nShow the child nodes : " << std::endl;
+	for (auto& it : childNodes) {
+		std::cout << "Node index : " << it.nodeIndex << std::endl;
+		std::cout << "Parent node index : " << it.parentNodeIndex << std::endl;
+		std::cout << "Is solution a tour : " << it.isSolutionATour << std::endl;
+		std::cout << "Weaker lower bound : " << it.weakerLowerBound << std::endl;
+		std::cout << "Lower bound : " << it.lowerBound << std::endl;
+		std::cout << "Delta : " << it.delta << std::endl;
+		std::cout << "Ip : " << std::endl;
+		for (auto ip : it.Ip) {
+			std::cout << ip << " ";
+		}
+		std::cout << "\nIq : " << std::endl;
+		for (auto iq : it.Iq) {
+			std::cout << iq << " ";
+		}
+		std::cout << "\nJp : " << std::endl;
+		for (auto jp : it.Jp) {
+			std::cout << jp << " ";
+		}
+		std::cout << "\nJq : " << std::endl;
+		for (auto jq : it.Jq) {
+			std::cout << jq << " ";
+		}
+		std::cout << "\nBranch on cell : " << "Row id : " << it.branchOnCell.rowID << ", Column id : " << it.branchOnCell.colID << std::endl;
+		std::cout << "Entering cell : " << "Row id : " << it.enteringCell.rowID << ", Column id : " << it.enteringCell.colID << std::endl;
+		std::cout << "Show basic solution : " << std::endl;
+		for (auto& bSol : it.basicSolution) {
+			std::cout << "Row id : " << bSol.rowID << " Column id : " << bSol.colID << " Value : " << bSol.value << std::endl;
+		}
+		std::cout << "Show rowwise dual solution : " << std::endl;
+		for (auto& rd : it.rowDualSolution) {
+			std::cout << rd << " ";
+		}
+		std::cout << "\nShow column wise dual solution : " << std::endl;
+		for (auto& cd : it.columnDualSolution) {
+			std::cout << cd << " ";
+		}
+		std::cout << "\nShow the cost tableau : " << std::endl;
+		for (int i = 0; i < it.costTableau.size(); i++) {
+			for (int j = 0; j < it.costTableau.size(); j++) {
+				std::cout << it.costTableau[i][j] << " ";
+			}
+			std::cout << " " << std::endl;
+		}
+	}
+}
+
+
 
