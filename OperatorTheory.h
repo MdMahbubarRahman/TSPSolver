@@ -81,6 +81,7 @@ private:
 	CostOperatorStatus cStatus;
 	std::list<std::vector<int>> clistOfRoutes;
 	std::list<AllocatedCell> cycleOfCells;
+	bool isCycleFeasible = false;
 
 public:
 	OperatorTheory();
@@ -92,9 +93,10 @@ public:
 	void scanningRoutine(int p, int q);
 	void updateDualSolution(double val);
 	void findMaxDeltaAndEnteringCell(int p, int q);
-	void generateCycleAndUpdateBasicSolution(int enteringCellRowId, int enteringCellColID);
+	void generateCycleWithEnteringCell(int enteringCellRowId, int enteringCellColID);
 	void generateListOfRoutes(std::map<int, int> boxPoints);
 	void updateBounds(std::map<int, int> boxPoints);
+	void checkCycleFeasibililtyAndUpdateBasicSolutionCostTableau();
 	void runCostOperatorForGeneratingRootNodes();
 	void runCostOperatorForSolvingANode();
 	std::list<Node> getChildNodes();

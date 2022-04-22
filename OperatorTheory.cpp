@@ -228,6 +228,19 @@ void OperatorTheory::scanningRoutine(int p, int q) {
 		newRowLabel = false;
 	}
 	//std::cout << "\nStop. The set Ip(Jp) consists of the rows(columns) labelled with 2; the set Iq(Jq) consists of the unlabelled rows(columns)." << std::endl;
+	std::cout << "\nClear I, J sets if they are nonempty." << std::endl;
+	if (!Ip.empty()) {
+		Ip.clear();
+	}
+	if (!Iq.empty()) {
+		Iq.clear();
+	}
+	if (!Jp.empty()) {
+		Jp.clear();
+	}
+	if (!Jq.empty()) {
+		Jq.clear();
+	}
 	for (int i = 0; i < size; i++) {
 		rowLabel[i] == 2 ? Ip.insert(i) : Iq.insert(i);
 		columnLabel[i] == 2 ? Jp.insert(i) : Jq.insert(i);
@@ -282,13 +295,15 @@ void OperatorTheory::updateDualSolution(double val) {
 			transformedColumnWiseDualSolution[i] = columnWiseDualSolution.at(i);
 		}
 	}
+	rowWiseDualSolution = transformedRowWiseDualSolution;
+	columnWiseDualSolution = transformedColumnWiseDualSolution;
 	std::cout << "\nShow updated dual solutions." << std::endl;
 	std::cout << "\nShow row dual solution : " << std::endl;
-	for (auto it : transformedRowWiseDualSolution) {
+	for (auto it : rowWiseDualSolution) {
 		std::cout << it << std::endl;
 	}
 	std::cout << "\nShow column dual solution : " << std::endl;
-	for (auto it : transformedColumnWiseDualSolution) {
+	for (auto it : columnWiseDualSolution) {
 		std::cout << it << std::endl;
 	}
 }
@@ -325,7 +340,7 @@ void OperatorTheory::findMaxDeltaAndEnteringCell(int p, int q) {
 }
 
 //generates cycle or loop containing entering and leaving cells
-void OperatorTheory::generateCycleAndUpdateBasicSolution(int enCellRowId, int enCellColID) {
+void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellColID) {
 	std::multimap<int, int> rowColMapForBasicSolution;
 	std::multimap<int, int> colRowMapForBasicSolution;
 	std::map<int, std::map<int, double>> cellToValueMap;
@@ -399,7 +414,7 @@ void OperatorTheory::generateCycleAndUpdateBasicSolution(int enCellRowId, int en
 			AllocatedCell newAllocatedCell = AllocatedCell();
 			newAllocatedCell.cellProperty.rowID = currentCell.postCell.rowID;
 			newAllocatedCell.cellProperty.colID = currentCell.postCell.colID;
-			newAllocatedCell.cellProperty.value = 1.0;
+			newAllocatedCell.cellProperty.value = cellToValueMap[newAllocatedCell.cellProperty.rowID][newAllocatedCell.cellProperty.colID];
 			newAllocatedCell.cellType = Giver;
 			newAllocatedCell.prevCell.rowID = currentCell.cellProperty.rowID;
 			newAllocatedCell.prevCell.colID = currentCell.cellProperty.colID;
@@ -561,6 +576,61 @@ void OperatorTheory::generateCycleAndUpdateBasicSolution(int enCellRowId, int en
 	cycleOfCells = cycleOfAllocatedCells;
 }
 
+//check wheter the generated cycle is feasible and updates basaic solution and cost tableau
+void OperatorTheory::checkCycleFeasibililtyAndUpdateBasicSolutionCostTableau() {
+	double minVal = INFINITY;
+	isCycleFeasible = false;
+	std::cout << "\nFind the minimum value of the giver cells." << std::endl;
+	for (auto& it : cycleOfCells) {
+		if (it.cellType == Giver) {
+			if (it.cellProperty.value < minVal) {
+				minVal = it.cellProperty.value;
+			}
+		}
+	}
+	minVal >= 1.0 ? isCycleFeasible = true : isCycleFeasible = false;
+	if (isCycleFeasible == true) {
+		std::cout << "\nUpdate cell values as the cycle is feasible." << std::endl;
+		for (auto& it : cycleOfCells) {
+			if (it.cellType == Giver) {
+				it.cellProperty.value -= minVal;
+			}
+			else if (it.cellType == Getter) {
+				it.cellProperty.value += minVal;
+			}
+		}
+		std::cout << "\nUpdate basic solution." << std::endl;
+		std::list<BasicCell> solution;
+		std::map<int, std::map<int, double>> cellMap;
+		for (auto& it : cycleOfCells) {
+			if (it.cellProperty.rowID == branchOnCell.rowID && it.cellProperty.colID == branchOnCell.colID) {
+				continue;
+			}
+			else {
+				solution.push_back(it.cellProperty);
+				cellMap[it.cellProperty.rowID][it.cellProperty.colID] = 1.0;
+			}
+		}
+		for (auto& it : basicSolution) {
+			if (cellMap[it.rowID][it.colID] != 1) {
+				if (it.rowID == branchOnCell.rowID && it.colID == branchOnCell.colID) {
+					continue;
+				}
+				else {
+					solution.push_back(it);
+				}
+			}
+		}
+		basicSolution = solution;
+	}
+	else {
+		std::cout << "\nNo need to change basic solution." << std::endl;
+	}
+	std::cout << "\nUpdate cost tableau." << std::endl;
+	isCycleFeasible == true ? costTableau[branchOnCell.rowID][branchOnCell.colID] = INFINITY : costTableau[branchOnCell.rowID][branchOnCell.colID] += delta;
+}
+
+//generate list of routes
 void OperatorTheory::generateListOfRoutes(std::map<int, int> boxPoints) {
 	std::vector<int> route;
 	int sourceNode = 0;
@@ -681,14 +751,32 @@ void OperatorTheory::updateBounds(std::map<int, int> bPoints) {
 
 //run cost operator
 void OperatorTheory::runCostOperatorForSolvingANode() {
-	generateCycleAndUpdateBasicSolution(enteringCell.rowID, enteringCell.colID);
+	while (isCycleFeasible == false) {
+		generateCycleWithEnteringCell(enteringCell.rowID, enteringCell.colID);
+		checkCycleFeasibililtyAndUpdateBasicSolutionCostTableau();
+		updateDualSolution(delta);
+		if (isCycleFeasible == false) {
+			scanningRoutine(branchOnCell.rowID, branchOnCell.colID);
+			findMaxDeltaAndEnteringCell(branchOnCell.rowID, branchOnCell.colID);
+		}
+	}
+	std::cout << "\nGenerate routes from the basic solution." << std::endl;
+	std::map<int, int> boxPoints;
+	for (auto& it : basicSolution) {
+		if (it.value == 1.0) {
+			boxPoints.insert(std::pair<int, int>(it.rowID, it.colID));
+		}
+	}
+	generateListOfRoutes(boxPoints);
 	//need works
 }
 
+//returns child nodes
 std::list<Node> OperatorTheory::getChildNodes() {
 	return childNodes;
 }
 
+//prints the contents of the child nodes
 void OperatorTheory::showChildNodes() {
 	std::cout << "\nShow the child nodes : " << std::endl;
 	for (auto& it : childNodes) {
