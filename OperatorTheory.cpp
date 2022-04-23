@@ -23,6 +23,7 @@ OperatorTheory::OperatorTheory(Node node) {
 	Jp = node.Jp;
 	Jq = node.Jq;
 	branchOnCell = node.branchOnCell;
+	enteringCell = node.enteringCell;
 	basicSolution = node.basicSolution;
 	rowWiseDualSolution = node.rowDualSolution;
 	columnWiseDualSolution = node.columnDualSolution;
@@ -228,6 +229,23 @@ void OperatorTheory::scanningRoutine(int p, int q) {
 		newRowLabel = false;
 	}
 	//std::cout << "\nStop. The set Ip(Jp) consists of the rows(columns) labelled with 2; the set Iq(Jq) consists of the unlabelled rows(columns)." << std::endl;
+	std::cout << "\nShow the contents of the I, J sets." << std::endl;
+	std::cout << "\nIp set elements : " << std::endl;
+	for (auto& it : Ip) {
+		std::cout << it << std::endl;
+	}
+	std::cout << "\nIq set elements : " << std::endl;
+	for (auto& it : Iq) {
+		std::cout << it << std::endl;
+	}
+	std::cout << "\nJp set elements : " << std::endl;
+	for (auto& it : Jp) {
+		std::cout << it << std::endl;
+	}
+	std::cout << "\nJq set elements : " << std::endl;
+	for (auto& it : Jq) {
+		std::cout << it << std::endl;
+	}
 	std::cout << "\nClear I, J sets if they are nonempty." << std::endl;
 	if (!Ip.empty()) {
 		Ip.clear();
@@ -245,7 +263,7 @@ void OperatorTheory::scanningRoutine(int p, int q) {
 		rowLabel[i] == 2 ? Ip.insert(i) : Iq.insert(i);
 		columnLabel[i] == 2 ? Jp.insert(i) : Jq.insert(i);
 	}
-	//show the contents of the different sets
+	std::cout << "\nShow the updated contents of the I, J sets." << std::endl;
 	std::cout << "\nIp set elements : " << std::endl;
 	for (auto& it : Ip) {
 		std::cout << it << std::endl;
@@ -266,6 +284,15 @@ void OperatorTheory::scanningRoutine(int p, int q) {
 
 //update dual variables
 void OperatorTheory::updateDualSolution(double val) {
+	std::cout << "\nShow dual solutions." << std::endl;
+	std::cout << "\nShow row dual solution : " << std::endl;
+	for (auto it : rowWiseDualSolution) {
+		std::cout << it << std::endl;
+	}
+	std::cout << "\nShow column dual solution : " << std::endl;
+	for (auto it : columnWiseDualSolution) {
+		std::cout << it << std::endl;
+	}
 	//Dual solutions for basis preserving cost operators \sigma Cpq+
 	std::vector<double> transformedRowWiseDualSolution;
 	std::vector<double> transformedColumnWiseDualSolution;
@@ -341,6 +368,7 @@ void OperatorTheory::findMaxDeltaAndEnteringCell(int p, int q) {
 
 //generates cycle or loop containing entering and leaving cells
 void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellColID) {
+	std::cout << "\nEntering cell row id : " << enCellRowId << ", col id : " << enCellColID << std::endl;
 	std::multimap<int, int> rowColMapForBasicSolution;
 	std::multimap<int, int> colRowMapForBasicSolution;
 	std::map<int, std::map<int, double>> cellToValueMap;
@@ -355,8 +383,7 @@ void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellCo
 	cellToValueMap[enteringCellRowID][enteringCellColumnID] = 0.0;
 	rowColMapForBasicSolution.insert(std::pair<int, int>(enteringCellRowID, enteringCellColumnID));
 	colRowMapForBasicSolution.insert(std::pair<int, int>(enteringCellColumnID, enteringCellRowID));
-	int leavingCellRowID = 0;
-	int leavingCellColumnID = 0;
+
 	//Entering cell cofig as allocated cell
 	AllocatedCell enteringCell = AllocatedCell();
 	enteringCell.cellProperty.rowID = enteringCellRowID;
@@ -369,8 +396,8 @@ void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellCo
 	enteringCell.postCell.colID = NULL;
 	AllocatedCell currentCell = enteringCell;
 	bool cycleComplete = false;
-	//int counter = 0;
-	//std::cout << "\nRow id : " << currentCell.cellProperty.rowID << " Column id : " << currentCell.cellProperty.colID << " Cell type : " << currentCell.cellType << std::endl;
+	bool enteringCellRowCovered = false;
+	bool enteringCellColumnCovered = false;
 	while (!cycleComplete) {
 		if ((currentCell.prevCell.rowID == currentCell.cellProperty.rowID) && (currentCell.prevCell.colID == currentCell.cellProperty.colID)) {
 			//searach row 
@@ -395,6 +422,7 @@ void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellCo
 					if (val == 1.0) {
 						currentCell.postCell.rowID = it;
 						currentCell.postCell.colID = currentCell.cellProperty.colID;
+						enteringCellColumnCovered = true;
 						break;
 					}
 				}
@@ -406,6 +434,7 @@ void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellCo
 					if (val == 1.0) {
 						currentCell.postCell.rowID = currentCell.cellProperty.rowID;
 						currentCell.postCell.colID = it;
+						enteringCellRowCovered = true;
 						break;
 					}
 				}
@@ -422,11 +451,6 @@ void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellCo
 			newAllocatedCell.postCell.colID = NULL;
 			cycleOfAllocatedCells.push_back(currentCell);
 			currentCell = newAllocatedCell;
-			/*
-			counter += 1;
-			std::cout << "\nFirst counter no: " << counter << std::endl;
-			std::cout << "\nRow id : " << currentCell.cellProperty.rowID << " Column id : " << currentCell.cellProperty.colID << " Cell type : " << currentCell.cellType << std::endl;
-			*/
 		}
 		else if ((currentCell.prevCell.rowID == currentCell.cellProperty.rowID) && (currentCell.prevCell.colID != currentCell.cellProperty.colID)) {
 			int rowId = NULL;
@@ -434,6 +458,7 @@ void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellCo
 			for (auto it = colRowMapForBasicSolution.lower_bound(currentCell.cellProperty.colID); it != colRowMapForBasicSolution.upper_bound(currentCell.cellProperty.colID); it++) {
 				if (((*it).second != currentCell.cellProperty.rowID) && ((*it).second == enteringCellRowID)) {
 					rowId = enteringCellRowID;
+					enteringCellRowCovered = true;
 				}
 			}
 			if (rowId == NULL) {
@@ -492,11 +517,12 @@ void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellCo
 				cycleOfAllocatedCells.push_back(currentCell);
 				currentCell = newAllocatedCell;
 			}
-			/*
-			counter += 1;
-			std::cout << "\nMiddle counter no: " << counter << std::endl;
-			std::cout << "\nRow id : " << currentCell.cellProperty.rowID << " Column id : " << currentCell.cellProperty.colID << " Cell type : " << currentCell.cellType << std::endl;
-			*/
+			if (enteringCellRowCovered == true && enteringCellColumnCovered == true) {
+				currentCell.postCell.rowID = enteringCellRowID;
+				currentCell.postCell.colID = enteringCellColumnID;
+				cycleOfAllocatedCells.push_back(currentCell);
+				break;
+			}
 		}
 		else if ((currentCell.prevCell.colID == currentCell.cellProperty.colID) && (currentCell.prevCell.rowID != currentCell.cellProperty.rowID)) {
 			int colId = NULL;
@@ -504,6 +530,7 @@ void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellCo
 			for (auto it = rowColMapForBasicSolution.lower_bound(currentCell.cellProperty.rowID); it != rowColMapForBasicSolution.upper_bound(currentCell.cellProperty.rowID); it++) {
 				if (((*it).second != currentCell.cellProperty.colID) && ((*it).second == enteringCellColumnID)) {
 					colId = enteringCellColumnID;
+					enteringCellColumnCovered = true;
 				}
 			}
 			if (colId == NULL) {
@@ -562,11 +589,12 @@ void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellCo
 				cycleOfAllocatedCells.push_back(currentCell);
 				currentCell = newAllocatedCell;
 			}
-			/*
-			counter += 1;
-			std::cout << "\nLast counter no: " << counter << std::endl;
-			std::cout << "\nRow id : " << currentCell.cellProperty.rowID << " Column id : " << currentCell.cellProperty.colID << " Cell type : " << currentCell.cellType << std::endl;
-			*/
+			if (enteringCellRowCovered == true && enteringCellColumnCovered == true) {
+				currentCell.postCell.rowID = enteringCellRowID;
+				currentCell.postCell.colID = enteringCellColumnID;
+				cycleOfAllocatedCells.push_back(currentCell);
+				break;
+			}
 		}
 	}
 	std::cout << "\nShow the cycle : " << std::endl;
@@ -592,12 +620,14 @@ void OperatorTheory::checkCycleFeasibililtyAndUpdateBasicSolutionCostTableau() {
 	if (isCycleFeasible == true) {
 		std::cout << "\nUpdate cell values as the cycle is feasible." << std::endl;
 		for (auto& it : cycleOfCells) {
+			std::cout << " row id : " << it.cellProperty.rowID << " col id : " << it.cellProperty.colID << " value : " << it.cellProperty.value << std::endl;
 			if (it.cellType == Giver) {
 				it.cellProperty.value -= minVal;
 			}
 			else if (it.cellType == Getter) {
 				it.cellProperty.value += minVal;
 			}
+			//std::cout << " row id : " << it.cellProperty.rowID << " col id : " << it.cellProperty.colID << " value : " << it.cellProperty.value << std::endl;
 		}
 		std::cout << "\nUpdate basic solution." << std::endl;
 		std::list<BasicCell> solution;
@@ -626,8 +656,21 @@ void OperatorTheory::checkCycleFeasibililtyAndUpdateBasicSolutionCostTableau() {
 	else {
 		std::cout << "\nNo need to change basic solution." << std::endl;
 	}
-	std::cout << "\nUpdate cost tableau." << std::endl;
+	std::cout << "\nPrint cost tableau." << std::endl;
+	for (int i = 0; i < costTableau.size(); i++) {
+		for (int j = 0; j < costTableau.size(); j++) {
+			std::cout << costTableau[i][j] << "  ";
+		}
+		std::cout << " " << std::endl;
+	}
 	isCycleFeasible == true ? costTableau[branchOnCell.rowID][branchOnCell.colID] = INFINITY : costTableau[branchOnCell.rowID][branchOnCell.colID] += delta;
+	std::cout << "\nPrint updated cost tableau." << std::endl;
+	for (int i = 0; i < costTableau.size(); i++) {
+		for (int j = 0; j < costTableau.size(); j++) {
+			std::cout << costTableau[i][j] << "  ";
+		}
+		std::cout << " " << std::endl;
+	}
 }
 
 //generate list of routes
@@ -665,23 +708,18 @@ void OperatorTheory::generateListOfRoutes(std::map<int, int> boxPoints) {
 	}
 }
 
-//update weaker lower bound
-void OperatorTheory::runCostOperatorForGeneratingRootNodes() {
-	generateInitialDualSolution();
-	std::map<int, int> boxPoints;
-	for (auto& it : basicSolution) {
-		if (it.value == 1.0) {
-			boxPoints.insert(std::pair<int, int>(it.rowID, it.colID));
-		}
-	}
-	generateListOfRoutes(boxPoints);
-	updateBounds(boxPoints);
-	//generate nodes to start branch and bound search
+//generates child nodes
+void OperatorTheory::generateChildNodes() {
+	//generate child nodes 
 	std::vector<int> route;
 	if (clistOfRoutes.size() > 1) {
+		double val = INFINITY;
 		for (auto& it : clistOfRoutes) {
-			route = it;
-			break;
+			if (it.size() < val) {
+				val = it.size();
+				route.clear();
+				route = it;
+			}
 		}
 		isSolutionATour = false;
 		std::map<int, int> cellMaps;
@@ -736,6 +774,21 @@ void OperatorTheory::runCostOperatorForGeneratingRootNodes() {
 		node.costTableau = costTableau;
 		childNodes.push_back(node);
 	}
+	//showChildNodes();
+}
+
+//update weaker lower bound
+void OperatorTheory::runCostOperatorForGeneratingRootNodes() {
+	generateInitialDualSolution();
+	std::map<int, int> boxPoints;
+	for (auto& it : basicSolution) {
+		if (it.value == 1.0) {
+			boxPoints.insert(std::pair<int, int>(it.rowID, it.colID));
+		}
+	}
+	generateListOfRoutes(boxPoints);
+	updateBounds(boxPoints);
+	generateChildNodes();
 }
 
 //update bounds
@@ -749,7 +802,7 @@ void OperatorTheory::updateBounds(std::map<int, int> bPoints) {
 	lowerBound = cost;
 }
 
-//run cost operator
+//run cost operator for solving a node
 void OperatorTheory::runCostOperatorForSolvingANode() {
 	while (isCycleFeasible == false) {
 		generateCycleWithEnteringCell(enteringCell.rowID, enteringCell.colID);
@@ -768,7 +821,8 @@ void OperatorTheory::runCostOperatorForSolvingANode() {
 		}
 	}
 	generateListOfRoutes(boxPoints);
-	//need works
+	updateBounds(boxPoints);
+	generateChildNodes();
 }
 
 //returns child nodes

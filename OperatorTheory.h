@@ -95,6 +95,7 @@ public:
 	void findMaxDeltaAndEnteringCell(int p, int q);
 	void generateCycleWithEnteringCell(int enteringCellRowId, int enteringCellColID);
 	void generateListOfRoutes(std::map<int, int> boxPoints);
+	void generateChildNodes();
 	void updateBounds(std::map<int, int> boxPoints);
 	void checkCycleFeasibililtyAndUpdateBasicSolutionCostTableau();
 	void runCostOperatorForGeneratingRootNodes();

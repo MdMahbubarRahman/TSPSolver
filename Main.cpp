@@ -13,6 +13,7 @@
 #include "OperatorTheory.h"
 
 int main() {
+
     std::fstream myFile;
     //open raod distance data file
     myFile.open("DistanceMatrix.txt", std::ios::in);//read
@@ -43,7 +44,7 @@ int main() {
         }
         myFile.close();
     }
-    
+
     std::vector<int> initialtour;
     initialtour.push_back(4);
     initialtour.push_back(10);
@@ -54,16 +55,11 @@ int main() {
     initialtour.push_back(14);
     initialtour.push_back(16);
     initialtour.push_back(17);
-    initialtour.push_back(18);
-    initialtour.push_back(19);
-    initialtour.push_back(20);
-    initialtour.push_back(21);
-    initialtour.push_back(22);
-    initialtour.push_back(23);
-    initialtour.push_back(24);
 
     BranchAndBoundSolver bbSolver(initialtour, roadDistance);
-    bbSolver.solveAssignmentProblem();
+    bbSolver.runBranchAndBoundSolver();
 
-	return 0;
+
+    return 0;
 }
+

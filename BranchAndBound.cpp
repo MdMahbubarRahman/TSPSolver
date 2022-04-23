@@ -170,7 +170,7 @@ void BranchAndBoundSolver::initBranchAndBoundTree() {
 	generateBasicTransportationSolution();
 	OperatorTheory operThry = OperatorTheory(transportationBasicSolution, costTableau);
 	operThry.runCostOperatorForGeneratingRootNodes();
-	operThry.showChildNodes();
+	//operThry.showChildNodes();
 	std::list<Node> rootNodes = operThry.getChildNodes();
 	//populate branch and bound tree
 	int counter = 0;
@@ -257,13 +257,15 @@ Node BranchAndBoundSolver::selectNodeBasedOnBestWeakerLowerBound() {
 	return node;
 }
 
-
+//solve a single node using cost operator
 void BranchAndBoundSolver::solveNodeByCostOperator(Node node) {
 	OperatorTheory opThry = OperatorTheory(node);
 	opThry.runCostOperatorForSolvingANode();
-	//need works
+	std::list<Node> nodes = opThry.getChildNodes();
+	for (auto& it : nodes) {
+		bbTree.branchNodes.push_back(it);
+	}
 }
-
 
 //run B&B algorithm
 void BranchAndBoundSolver::runBranchAndBoundSolver() {
