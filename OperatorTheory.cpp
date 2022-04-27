@@ -6,8 +6,8 @@ OperatorTheory::OperatorTheory() {
 	nodeIndex = 0;
 	parentNodeIndex = 0;
 	isSolutionATour = false;
-	weakerLowerBound = -INFINITY;
-	lowerBound = -INFINITY;
+	weakerLowerBound = INFINITY;
+	lowerBound = INFINITY;
 	delta = 0.0;
 }
 
@@ -36,8 +36,8 @@ OperatorTheory::OperatorTheory(std::list<BasicCell> basicSol, std::vector<std::v
 	nodeIndex = 0;
 	parentNodeIndex = 0;
 	isSolutionATour = false;
-	weakerLowerBound = -INFINITY;
-	lowerBound = -INFINITY;
+	weakerLowerBound = INFINITY;
+	lowerBound = INFINITY;
 	delta = 0.0;
 	basicSolution = basicSol;
 	costTableau = cTableau;
@@ -53,8 +53,8 @@ OperatorTheory::OperatorTheory(std::list<BasicCell> basicSol, std::vector<double
 	nodeIndex = 0;
 	parentNodeIndex = 0;
 	isSolutionATour = false;
-	weakerLowerBound = -INFINITY;
-	lowerBound = -INFINITY;
+	weakerLowerBound = INFINITY;
+	lowerBound = INFINITY;
 	delta = 0.0;
 	basicSolution = basicSol;
 	rowWiseDualSolution = rowWiseDualSol;
@@ -378,6 +378,7 @@ void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellCo
 		cellToValueMap[it.rowID][it.colID] = it.value;
 	}
 	std::list<AllocatedCell> cycleOfAllocatedCells;
+	std::list<AllocatedCell> deletedAllocatedCells;
 	int enteringCellRowID = enCellRowId;
 	int enteringCellColumnID = enCellColID;
 	cellToValueMap[enteringCellRowID][enteringCellColumnID] = 0.0;
@@ -398,7 +399,13 @@ void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellCo
 	bool cycleComplete = false;
 	bool enteringCellRowCovered = false;
 	bool enteringCellColumnCovered = false;
+
+	std::cout << "\nShow current basic solution : " << std::endl;
+	for (auto& it : basicSolution) {
+		std::cout << "\nRow id : " << it.rowID << ", Col id : " << it.colID << ", value : " << it.value << std::endl;
+	}
 	while (!cycleComplete) {
+		//std::cout << "\nCurrent Cell row ID : " << currentCell.cellProperty.rowID << ", current Cell col ID : " << currentCell.cellProperty.colID << std::endl;
 		if ((currentCell.prevCell.rowID == currentCell.cellProperty.rowID) && (currentCell.prevCell.colID == currentCell.cellProperty.colID)) {
 			//searach row 
 			std::list<int> listOfColumns;
@@ -468,7 +475,9 @@ void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellCo
 					}
 				}
 				if (rowList.size() == 0) {
-					//needs to implement later
+					std::cout << "\nThe zero row size case has appeared!" << std::endl;
+					walkBackThroughTheCycleAndChooseNewAllocatedCell(currentCell, cycleOfAllocatedCells, deletedAllocatedCells, rowColMapForBasicSolution, colRowMapForBasicSolution, cellToValueMap);
+					continue;
 				}
 				else if (rowList.size() == 1) {
 					rowId = rowList.at(0);
@@ -540,7 +549,9 @@ void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellCo
 					}
 				}
 				if (colList.size() == 0) {
-					//needs to implement later
+					std::cout << "\nThe zero column size case has appeared!" << std::endl;
+					walkBackThroughTheCycleAndChooseNewAllocatedCell(currentCell, cycleOfAllocatedCells, deletedAllocatedCells, rowColMapForBasicSolution, colRowMapForBasicSolution, cellToValueMap);
+					continue;
 				}
 				else if (colList.size() == 1) {
 					colId = colList.at(0);
@@ -603,6 +614,124 @@ void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellCo
 	}
 	cycleOfCells = cycleOfAllocatedCells;
 }
+
+//fix the current cycle if it ends up being a tree
+void OperatorTheory::walkBackThroughTheCycleAndChooseNewAllocatedCell(AllocatedCell& currentCell, std::list<AllocatedCell>& cycleOfAllocatedCells, std::list<AllocatedCell>& deletedAllocatedCells, std::multimap<int, int>& rowColMapForBasicSolution, std::multimap<int, int>& colRowMapForBasicSolution, std::map<int, std::map<int, double>>& cellToValueMap) {
+	bool newCellSelected = false;
+	while (!newCellSelected) {
+		//delete all the deleted allocated cells whose precedence cell is the current cell from the deletedAllocatedCells list
+		std::list<std::list<AllocatedCell>::iterator> iterList;
+		std::list<AllocatedCell>::iterator iter;
+		if (!deletedAllocatedCells.empty()) {
+			//std::cout << "\nInside first if block." << std::endl;
+			for (auto it = deletedAllocatedCells.begin(); it != deletedAllocatedCells.end(); it++) {
+				if ((*it).prevCell.rowID == currentCell.cellProperty.rowID && (*it).prevCell.colID == currentCell.cellProperty.colID) {
+					iterList.push_back(it);
+				}
+			}
+		}
+		while (!iterList.empty()) {
+			//std::cout << "\nInside while block." << std::endl;
+			auto it = iterList.begin();
+			iter = (*it);
+			deletedAllocatedCells.erase(iter);
+			iterList.erase(it);
+		}
+		deletedAllocatedCells.push_back(currentCell);
+		//look for a new allocated cell 
+		if (currentCell.cellProperty.rowID == currentCell.prevCell.rowID && currentCell.cellProperty.colID != currentCell.prevCell.colID) {
+			std::list<int> colList;
+			for (auto it = rowColMapForBasicSolution.lower_bound(currentCell.prevCell.rowID); it != rowColMapForBasicSolution.upper_bound(currentCell.prevCell.rowID); it++) {
+				if ((*it).second != currentCell.cellProperty.colID && (*it).second != currentCell.prevCell.colID) {
+					bool deletedBefore = false;
+					for (auto& itt : deletedAllocatedCells) {
+						if (itt.cellProperty.rowID == currentCell.cellProperty.rowID && itt.cellProperty.colID == (*it).second) {
+							deletedBefore = true;
+						}
+					}
+					if (deletedBefore == false) {
+						colList.push_back((*it).second);
+					}
+				}
+			}
+			if (!colList.empty()) {
+				auto colIter = colList.begin();
+				int colId = (*colIter);
+				AllocatedCell newAllCell = AllocatedCell();
+				newAllCell.cellProperty.rowID = currentCell.cellProperty.rowID;
+				newAllCell.cellProperty.colID = colId;
+				newAllCell.cellProperty.value = cellToValueMap[newAllCell.cellProperty.rowID][newAllCell.cellProperty.colID];
+				newAllCell.cellType = currentCell.cellType;
+				newAllCell.prevCell = currentCell.prevCell;
+				newAllCell.postCell.rowID = NULL;
+				newAllCell.postCell.colID = NULL;
+				currentCell = newAllCell;
+				newCellSelected = true;
+			}
+			else {
+				newCellSelected = false;
+				AllocatedCell prevAllocatedCell = AllocatedCell();
+				std::list<AllocatedCell>::iterator cycleIterator;
+				for (auto it = cycleOfAllocatedCells.begin(); it != cycleOfAllocatedCells.end(); it++) {
+					if ((*it).cellProperty.rowID == currentCell.prevCell.rowID && (*it).cellProperty.colID == currentCell.prevCell.colID) {
+						cycleIterator = it;
+					}
+				}
+				prevAllocatedCell = (*cycleIterator);
+				cycleOfAllocatedCells.erase(cycleIterator);
+				currentCell = prevAllocatedCell;
+				currentCell.postCell.rowID = NULL;
+				currentCell.postCell.colID = NULL;
+			}
+		}
+		else if (currentCell.cellProperty.rowID != currentCell.prevCell.rowID && currentCell.cellProperty.colID == currentCell.prevCell.colID) {
+			std::list<int> rowList;
+			for (auto it = colRowMapForBasicSolution.lower_bound(currentCell.prevCell.colID); it != colRowMapForBasicSolution.upper_bound(currentCell.prevCell.colID); it++) {
+				if ((*it).second != currentCell.cellProperty.rowID && (*it).second != currentCell.prevCell.rowID) {
+					bool deletedBefore = false;
+					for (auto& itt : deletedAllocatedCells) {
+						if (itt.cellProperty.rowID == (*it).second && itt.cellProperty.colID == currentCell.cellProperty.colID) {
+							deletedBefore = true;
+						}
+					}
+					if (deletedBefore == false) {
+						rowList.push_back((*it).second);
+					}
+				}
+			}
+			if (!rowList.empty()) {
+				auto rowIter = rowList.begin();
+				int rowId = (*rowIter);
+				AllocatedCell newAllCell = AllocatedCell();
+				newAllCell.cellProperty.rowID = rowId;
+				newAllCell.cellProperty.colID = currentCell.cellProperty.colID;
+				newAllCell.cellProperty.value = cellToValueMap[newAllCell.cellProperty.rowID][newAllCell.cellProperty.colID];
+				newAllCell.cellType = currentCell.cellType;
+				newAllCell.prevCell = currentCell.prevCell;
+				newAllCell.postCell.rowID = NULL;
+				newAllCell.postCell.colID = NULL;
+				currentCell = newAllCell;
+				newCellSelected = true;
+			}
+			else {
+				newCellSelected = false;
+				AllocatedCell prevAllocatedCell = AllocatedCell();
+				std::list<AllocatedCell>::iterator cycleIterator;
+				for (auto it = cycleOfAllocatedCells.begin(); it != cycleOfAllocatedCells.end(); it++) {
+					if ((*it).cellProperty.rowID == currentCell.prevCell.rowID && (*it).cellProperty.colID == currentCell.prevCell.colID) {
+						cycleIterator = it;
+					}
+				}
+				prevAllocatedCell = (*cycleIterator);
+				cycleOfAllocatedCells.erase(cycleIterator);
+				currentCell = prevAllocatedCell;
+				currentCell.postCell.rowID = NULL;
+				currentCell.postCell.colID = NULL;
+			}
+		}
+	}
+}
+
 
 //check wheter the generated cycle is feasible and updates basaic solution and cost tableau
 void OperatorTheory::checkCycleFeasibililtyAndUpdateBasicSolutionCostTableau() {
@@ -805,6 +934,7 @@ void OperatorTheory::updateBounds(std::map<int, int> bPoints) {
 //run cost operator for solving a node
 void OperatorTheory::runCostOperatorForSolvingANode() {
 	while (isCycleFeasible == false) {
+		std::cout << "\nGenerate cycle with entering cell." << std::endl;
 		generateCycleWithEnteringCell(enteringCell.rowID, enteringCell.colID);
 		checkCycleFeasibililtyAndUpdateBasicSolutionCostTableau();
 		updateDualSolution(delta);
@@ -822,6 +952,13 @@ void OperatorTheory::runCostOperatorForSolvingANode() {
 	}
 	generateListOfRoutes(boxPoints);
 	updateBounds(boxPoints);
+	std::cout << "\nShow the current subtours : " << std::endl;
+	for (auto& it : clistOfRoutes) {
+		for (auto itt : it) {
+			std::cout << itt << " ";
+		}
+		std::cout << " " << std::endl;
+	}
 	generateChildNodes();
 }
 

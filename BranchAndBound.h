@@ -70,10 +70,11 @@ public:
 	void solveNodeByCostOperator(Node node);
 	TSPSolution getTSPSolution();
 	void pruneNodeByIntegrality();
+	void pruneNodesWithNegativeDelta();
+	void checkForBBOptimality();
 	Node selectNodeBasedOnBestWeakerLowerBound();
 	void runBranchAndBoundSolver();
 };
 
 #endif
-
 

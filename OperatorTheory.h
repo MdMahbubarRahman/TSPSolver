@@ -102,6 +102,7 @@ public:
 	void runCostOperatorForSolvingANode();
 	std::list<Node> getChildNodes();
 	void showChildNodes();
+	void walkBackThroughTheCycleAndChooseNewAllocatedCell(AllocatedCell& currentCell, std::list<AllocatedCell>& cycleOfAllocatedCells, std::list<AllocatedCell>& deletedAllocatedCells, std::multimap<int, int>& rowColMapForBasicSolution, std::multimap<int, int>& colRowMapForBasicSolution, std::map<int, std::map<int, double>>& cellToValueMap);
 };
 
 #endif

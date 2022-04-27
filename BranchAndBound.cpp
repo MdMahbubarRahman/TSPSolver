@@ -5,8 +5,8 @@
 BranchAndBoundSolver::BranchAndBoundSolver() {
 	totalTime = 0;
 	maxTimeLimit = 1000;//1000sec
-	lowerBound = -INFINITY;
-	weakerLowerBound = -INFINITY;
+	lowerBound = INFINITY;
+	weakerLowerBound = INFINITY;
 	upperBound = INFINITY;
 }
 
@@ -31,9 +31,10 @@ BranchAndBoundSolver::BranchAndBoundSolver(std::vector<int> initialTourOfCities,
 	//populate variables with initial values
 	totalTime = 0;
 	maxTimeLimit = 1000;//1000sec
-	lowerBound = -INFINITY;
-	weakerLowerBound = -INFINITY;
+	lowerBound = INFINITY;
+	weakerLowerBound = INFINITY;
 	upperBound = INFINITY;
+	incumbent.objValue = INFINITY;
 }
 
 //copy constructor
@@ -182,6 +183,7 @@ void BranchAndBoundSolver::initBranchAndBoundTree() {
 		counter += 1;
 	}
 	bbTree.currentNumOfNodes = counter;
+	std::cout << "\nNumber of current nodes : " << counter << std::endl;
 }
 
 //returns tsp solution if any exists
@@ -191,20 +193,23 @@ TSPSolution BranchAndBoundSolver::getTSPSolution() {
 
 //prune node consisting of a single tour
 void BranchAndBoundSolver::pruneNodeByIntegrality() {
-	bool singleTourExist = false;
+	//bool singleTourExist = false;
 	std::list<Node>::iterator nodeId;
+	std::list<std::list<Node>::iterator> singleTourNodes;
 	for (auto it = bbTree.branchNodes.begin(); it != bbTree.branchNodes.end(); it++) {
 		if ((*it).isSolutionATour == true) {
-			nodeId = it;
-			singleTourExist = true;
+			singleTourNodes.push_back(it);
+			std::cout << "\nTour solution has been found!" << std::endl;
 		}
 	}
-	if (singleTourExist == true) {
+	while (!singleTourNodes.empty()) {
 		std::map<int, int> tour;
 		std::vector<int> route;
 		int sourceNode = 0;
 		int destinationNode = 0;
 		int routeStartNode = 0;
+		auto id = singleTourNodes.begin();
+		nodeId = *id;
 		std::map<int, int> newAssignments;
 		for (auto& it : (*nodeId).basicSolution) {
 			if (it.value == 1.0) {
@@ -239,8 +244,34 @@ void BranchAndBoundSolver::pruneNodeByIntegrality() {
 		sol.tourSolution = route;
 		tourSolutions.push_back(sol);
 		bbTree.branchNodes.erase(nodeId);
+		if (sol.objValue < lowerBound) {
+			lowerBound = sol.objValue;
+			incumbent.tour = route;
+			incumbent.objValue = lowerBound;
+			incumbent.incumbentSolution = (*nodeId).basicSolution;
+		}
+		singleTourNodes.erase(id);
 	}
 }
+
+//prune nodes with negative delta values
+void BranchAndBoundSolver::pruneNodesWithNegativeDelta() {
+	std::list<Node>::iterator nodeId;
+	std::list<std::list<Node>::iterator> negativeDeltaNodes;
+	for (auto it = bbTree.branchNodes.begin(); it != bbTree.branchNodes.end(); it++) {
+		if ((*it).delta < 0.1) {
+			negativeDeltaNodes.push_back(it);
+			std::cout << "\nNegative delta node has been found!" << std::endl;
+		}
+	}
+	while (!negativeDeltaNodes.empty()) {
+		auto id = negativeDeltaNodes.begin();
+		nodeId = *id;
+		bbTree.branchNodes.erase(nodeId);
+		negativeDeltaNodes.erase(id);
+	}
+}
+
 
 //node selection based on best weaker lower bound
 Node BranchAndBoundSolver::selectNodeBasedOnBestWeakerLowerBound() {
@@ -254,6 +285,8 @@ Node BranchAndBoundSolver::selectNodeBasedOnBestWeakerLowerBound() {
 	}
 	Node node = (*nodeId);
 	bbTree.branchNodes.erase(nodeId);
+	std::cout << "\nThe weaker lower bound of the current node is : " << node.weakerLowerBound << std::endl;
+
 	return node;
 }
 
@@ -265,16 +298,45 @@ void BranchAndBoundSolver::solveNodeByCostOperator(Node node) {
 	for (auto& it : nodes) {
 		bbTree.branchNodes.push_back(it);
 	}
+	opThry.showChildNodes();
+}
+
+//check optimality of the BB algm
+void BranchAndBoundSolver::checkForBBOptimality() {
+	double val = INFINITY;
+	for (auto& it : bbTree.branchNodes) {
+		if (it.weakerLowerBound < val) {
+			val = it.weakerLowerBound;
+		}
+	}
+	if (incumbent.objValue <= val) {
+		std::cout << "\nThe optimal solution of the Branch and Bound Algm has been achieved!" << std::endl;
+		bStatus = Optimal;
+	}
 }
 
 //run B&B algorithm
 void BranchAndBoundSolver::runBranchAndBoundSolver() {
+	bStatus = LocalOptimal;
 	initBranchAndBoundTree();
 	while (!bbTree.branchNodes.empty()) {
 		pruneNodeByIntegrality();
-		Node node = selectNodeBasedOnBestWeakerLowerBound();
-		solveNodeByCostOperator(node);
-		//need works
+		pruneNodesWithNegativeDelta();
+		checkForBBOptimality();
+		if (bStatus == Optimal) {
+			break;
+		}
+		else {
+			Node node = selectNodeBasedOnBestWeakerLowerBound();
+			solveNodeByCostOperator(node);
+		}
+		std::cout << "\nNumber of currents nodes in the tree : " << bbTree.branchNodes.size() << std::endl;
 	}
+	std::cout << "\nObjective value : " << incumbent.objValue << std::endl;
+	std::cout << "\nThe tour is : " << std::endl;
+	for (auto& it : incumbent.tour) {
+		std::cout << it << " ";
+	}
+	std::cout << " " << std::endl;
 }
 
