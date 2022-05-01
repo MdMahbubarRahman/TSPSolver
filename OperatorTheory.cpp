@@ -85,7 +85,7 @@ OperatorTheory::OperatorTheory(const OperatorTheory& opThr) {
 }
 
 //generate initial dual solution
-void OperatorTheory::generateInitialDualSolution() {
+void OperatorTheory::generateDualSolution() {
 	std::multimap<int, int> rowColMapForBasicSolution;
 	std::multimap<int, int> colRowMapForBasicSolution;
 	for (auto& it : basicSolution) {
@@ -148,20 +148,22 @@ void OperatorTheory::generateInitialDualSolution() {
 				counter += 1;
 			}
 		}
-		std::cout << "\nThe number of dual solutions found : " << counter << std::endl;
+		//std::cout << "\nThe number of dual solutions found : " << counter << std::endl;
 		if (counter == (2 * costTableau.size())) {
 			dualflag = true;
 		}
 	}
+	/*
 	std::cout << "\nShow the dual solutions." << std::endl;
 	std::cout << "\nThe row dual solution are : " << std::endl;
-	for (auto& it : rowWiseDualSolution) {
+	for (auto & it:rowWiseDualSolution) {
 		std::cout << it << std::endl;
 	}
 	std::cout << "\nThe column dual solution are : " << std::endl;
 	for (auto& it : columnWiseDualSolution) {
 		std::cout << it << std::endl;
 	}
+	*/
 }
 
 //scanning routine to populate Ip, Iq, Jp, Jq sets
@@ -229,6 +231,7 @@ void OperatorTheory::scanningRoutine(int p, int q) {
 		newRowLabel = false;
 	}
 	//std::cout << "\nStop. The set Ip(Jp) consists of the rows(columns) labelled with 2; the set Iq(Jq) consists of the unlabelled rows(columns)." << std::endl;
+	/*
 	std::cout << "\nShow the contents of the I, J sets." << std::endl;
 	std::cout << "\nIp set elements : " << std::endl;
 	for (auto& it : Ip) {
@@ -246,6 +249,7 @@ void OperatorTheory::scanningRoutine(int p, int q) {
 	for (auto& it : Jq) {
 		std::cout << it << std::endl;
 	}
+	*/
 	std::cout << "\nClear I, J sets if they are nonempty." << std::endl;
 	if (!Ip.empty()) {
 		Ip.clear();
@@ -263,9 +267,10 @@ void OperatorTheory::scanningRoutine(int p, int q) {
 		rowLabel[i] == 2 ? Ip.insert(i) : Iq.insert(i);
 		columnLabel[i] == 2 ? Jp.insert(i) : Jq.insert(i);
 	}
+	/*
 	std::cout << "\nShow the updated contents of the I, J sets." << std::endl;
 	std::cout << "\nIp set elements : " << std::endl;
-	for (auto& it : Ip) {
+	for (auto & it: Ip) {
 		std::cout << it << std::endl;
 	}
 	std::cout << "\nIq set elements : " << std::endl;
@@ -280,10 +285,12 @@ void OperatorTheory::scanningRoutine(int p, int q) {
 	for (auto& it : Jq) {
 		std::cout << it << std::endl;
 	}
+	*/
 }
 
 //update dual variables
 void OperatorTheory::updateDualSolution(double val) {
+	/*
 	std::cout << "\nShow dual solutions." << std::endl;
 	std::cout << "\nShow row dual solution : " << std::endl;
 	for (auto it : rowWiseDualSolution) {
@@ -293,6 +300,7 @@ void OperatorTheory::updateDualSolution(double val) {
 	for (auto it : columnWiseDualSolution) {
 		std::cout << it << std::endl;
 	}
+	*/
 	//Dual solutions for basis preserving cost operators \sigma Cpq+
 	std::vector<double> transformedRowWiseDualSolution;
 	std::vector<double> transformedColumnWiseDualSolution;
@@ -324,15 +332,17 @@ void OperatorTheory::updateDualSolution(double val) {
 	}
 	rowWiseDualSolution = transformedRowWiseDualSolution;
 	columnWiseDualSolution = transformedColumnWiseDualSolution;
+	/*
 	std::cout << "\nShow updated dual solutions." << std::endl;
 	std::cout << "\nShow row dual solution : " << std::endl;
-	for (auto it : rowWiseDualSolution) {
+	for (auto it: rowWiseDualSolution) {
 		std::cout << it << std::endl;
 	}
 	std::cout << "\nShow column dual solution : " << std::endl;
 	for (auto it : columnWiseDualSolution) {
 		std::cout << it << std::endl;
 	}
+	*/
 }
 
 //find max delta and find the potential entering cells
@@ -346,7 +356,7 @@ void OperatorTheory::findMaxDeltaAndEnteringCell(int p, int q) {
 	for (auto it : Ip) {
 		for (auto itt : Jq) {
 			if (it == cellRowID && itt == cellColumnID) {
-				//do nothing
+				continue;
 			}
 			else {
 				val = costTableau[it][itt] - rowWiseDualSolution[it] - columnWiseDualSolution[itt];
@@ -358,17 +368,56 @@ void OperatorTheory::findMaxDeltaAndEnteringCell(int p, int q) {
 			}
 		}
 	}
-	std::cout << "\nThe entering cell row id : " << enteringCellRowID << " " << "column id : " << enteringCellColumnID << std::endl;
+	//std::cout << "\nThe entering cell row id : " << enteringCellRowID << " " << "column id : " << enteringCellColumnID << std::endl;
 	delta = maxDelta;
 	Cell cell = Cell();
 	cell.rowID = enteringCellRowID;
 	cell.colID = enteringCellColumnID;
 	enteringCell = cell;
+	//std::cout << "\nDelta value : " << delta << std::endl;
+}
+
+
+
+//find max delta and find the potential entering cells
+void OperatorTheory::findMaxDeltaAndEnteringCellWithForbiddenCell(int p, int q, Cell forbiddenCell) {
+	double maxDelta = INFINITY;
+	int cellRowID = p;
+	int cellColumnID = q;
+	int enteringCellRowID = 0;
+	int enteringCellColumnID = 0;
+	Cell bannedCell = forbiddenCell;
+	double val = 0;
+	for (auto it : Ip) {
+		for (auto itt : Jq) {
+			if (it == cellRowID && itt == cellColumnID) {
+				continue;
+			}
+			else if (it == bannedCell.rowID && itt == bannedCell.colID) {
+				continue;
+			}
+			else {
+				val = costTableau[it][itt] - rowWiseDualSolution[it] - columnWiseDualSolution[itt];
+				if (val < maxDelta) {
+					maxDelta = val;
+					enteringCellRowID = it;
+					enteringCellColumnID = itt;
+				}
+			}
+		}
+	}
+	//std::cout << "\nThe entering cell row id : " << enteringCellRowID << " " << "column id : " << enteringCellColumnID << std::endl;
+	delta = maxDelta;
+	Cell cell = Cell();
+	cell.rowID = enteringCellRowID;
+	cell.colID = enteringCellColumnID;
+	enteringCell = cell;
+	//std::cout << "\nDelta value : " << delta << std::endl;
 }
 
 //generates cycle or loop containing entering and leaving cells
 void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellColID) {
-	std::cout << "\nEntering cell row id : " << enCellRowId << ", col id : " << enCellColID << std::endl;
+	//std::cout << "\nEntering cell row id : " << enCellRowId << ", col id : " << enCellColID << std::endl;
 	std::multimap<int, int> rowColMapForBasicSolution;
 	std::multimap<int, int> colRowMapForBasicSolution;
 	std::map<int, std::map<int, double>> cellToValueMap;
@@ -399,11 +448,12 @@ void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellCo
 	bool cycleComplete = false;
 	bool enteringCellRowCovered = false;
 	bool enteringCellColumnCovered = false;
-
+	/*
 	std::cout << "\nShow current basic solution : " << std::endl;
-	for (auto& it : basicSolution) {
+	for (auto & it: basicSolution) {
 		std::cout << "\nRow id : " << it.rowID << ", Col id : " << it.colID << ", value : " << it.value << std::endl;
 	}
+	*/
 	while (!cycleComplete) {
 		//std::cout << "\nCurrent Cell row ID : " << currentCell.cellProperty.rowID << ", current Cell col ID : " << currentCell.cellProperty.colID << std::endl;
 		if ((currentCell.prevCell.rowID == currentCell.cellProperty.rowID) && (currentCell.prevCell.colID == currentCell.cellProperty.colID)) {
@@ -608,10 +658,12 @@ void OperatorTheory::generateCycleWithEnteringCell(int enCellRowId, int enCellCo
 			}
 		}
 	}
+	/*
 	std::cout << "\nShow the cycle : " << std::endl;
-	for (auto& it : cycleOfAllocatedCells) {
+	for (auto & it: cycleOfAllocatedCells) {
 		std::cout << "\nrow id : " << it.cellProperty.rowID << " column id : " << it.cellProperty.colID << " cell type : " << it.cellType << " allocated value : " << it.cellProperty.value << std::endl;
 	}
+	*/
 	cycleOfCells = cycleOfAllocatedCells;
 }
 
@@ -749,7 +801,7 @@ void OperatorTheory::checkCycleFeasibililtyAndUpdateBasicSolutionCostTableau() {
 	if (isCycleFeasible == true) {
 		std::cout << "\nUpdate cell values as the cycle is feasible." << std::endl;
 		for (auto& it : cycleOfCells) {
-			std::cout << " row id : " << it.cellProperty.rowID << " col id : " << it.cellProperty.colID << " value : " << it.cellProperty.value << std::endl;
+			//std::cout << " row id : " << it.cellProperty.rowID << " col id : " << it.cellProperty.colID << " value : " << it.cellProperty.value << std::endl;
 			if (it.cellType == Giver) {
 				it.cellProperty.value -= minVal;
 			}
@@ -785,6 +837,7 @@ void OperatorTheory::checkCycleFeasibililtyAndUpdateBasicSolutionCostTableau() {
 	else {
 		std::cout << "\nNo need to change basic solution." << std::endl;
 	}
+	/*
 	std::cout << "\nPrint cost tableau." << std::endl;
 	for (int i = 0; i < costTableau.size(); i++) {
 		for (int j = 0; j < costTableau.size(); j++) {
@@ -792,7 +845,9 @@ void OperatorTheory::checkCycleFeasibililtyAndUpdateBasicSolutionCostTableau() {
 		}
 		std::cout << " " << std::endl;
 	}
+	*/
 	isCycleFeasible == true ? costTableau[branchOnCell.rowID][branchOnCell.colID] = INFINITY : costTableau[branchOnCell.rowID][branchOnCell.colID] += delta;
+	/*
 	std::cout << "\nPrint updated cost tableau." << std::endl;
 	for (int i = 0; i < costTableau.size(); i++) {
 		for (int j = 0; j < costTableau.size(); j++) {
@@ -800,6 +855,7 @@ void OperatorTheory::checkCycleFeasibililtyAndUpdateBasicSolutionCostTableau() {
 		}
 		std::cout << " " << std::endl;
 	}
+	*/
 }
 
 //generate list of routes
@@ -855,6 +911,13 @@ void OperatorTheory::generateChildNodes() {
 		for (int i = 0; i < route.size() - 1; i++) {
 			cellMaps.insert(std::pair<int, int>(route.at(i), route.at(i + 1)));
 		}
+		cellMaps.insert(std::pair<int, int>(route.at(route.size() - 1), route.at(0)));
+		/*
+		std::cout << "\nBranch on cells : " << std::endl;
+		for (auto &it: cellMaps) {
+			std::cout << "row id : " << it.first << " col id : " << it.second << std::endl;
+		}
+		*/
 		//create nodes
 		double nodeNum = parentNodeIndex;
 		for (auto& it : cellMaps) {
@@ -863,6 +926,7 @@ void OperatorTheory::generateChildNodes() {
 			cell.rowID = it.first;
 			cell.colID = it.second;
 			branchOnCell = cell;
+			std::cout << "\nBranch on cell row id : " << branchOnCell.rowID << ", column id : " << branchOnCell.colID << std::endl;
 			scanningRoutine(branchOnCell.rowID, branchOnCell.colID);
 			findMaxDeltaAndEnteringCell(branchOnCell.rowID, branchOnCell.colID);
 			double weakerLB = 0;
@@ -903,12 +967,12 @@ void OperatorTheory::generateChildNodes() {
 		node.costTableau = costTableau;
 		childNodes.push_back(node);
 	}
-	//showChildNodes();
+	std::cout << "\nNumber of child nodes generated : " << childNodes.size() << std::endl;
 }
 
 //update weaker lower bound
 void OperatorTheory::runCostOperatorForGeneratingRootNodes() {
-	generateInitialDualSolution();
+	generateDualSolution();
 	std::map<int, int> boxPoints;
 	for (auto& it : basicSolution) {
 		if (it.value == 1.0) {
@@ -933,14 +997,29 @@ void OperatorTheory::updateBounds(std::map<int, int> bPoints) {
 
 //run cost operator for solving a node
 void OperatorTheory::runCostOperatorForSolvingANode() {
+	Cell prevEnteringCell = Cell();
+	Cell forbiddenCell = Cell();
+	int counter = 0;
+	prevEnteringCell = enteringCell;
 	while (isCycleFeasible == false) {
 		std::cout << "\nGenerate cycle with entering cell." << std::endl;
 		generateCycleWithEnteringCell(enteringCell.rowID, enteringCell.colID);
 		checkCycleFeasibililtyAndUpdateBasicSolutionCostTableau();
-		updateDualSolution(delta);
 		if (isCycleFeasible == false) {
+			counter++;
+			updateDualSolution(delta);
 			scanningRoutine(branchOnCell.rowID, branchOnCell.colID);
-			findMaxDeltaAndEnteringCell(branchOnCell.rowID, branchOnCell.colID);
+			if (counter < 2) {
+				findMaxDeltaAndEnteringCell(branchOnCell.rowID, branchOnCell.colID);
+			}
+			else {
+				forbiddenCell = enteringCell;
+				findMaxDeltaAndEnteringCellWithForbiddenCell(branchOnCell.rowID, branchOnCell.colID, forbiddenCell);
+				counter = 0;
+			}
+		}
+		else {
+			generateDualSolution();
 		}
 	}
 	std::cout << "\nGenerate routes from the basic solution." << std::endl;

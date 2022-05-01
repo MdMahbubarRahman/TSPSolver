@@ -22,9 +22,7 @@ HungarianAlg::HungarianAlg(const HungarianAlg& hunAlg) {
 	boxPoints = hunAlg.boxPoints;
 	assignmentOptimal = hunAlg.assignmentOptimal;
 	listOfRoutes = hunAlg.listOfRoutes;
-	initialTsp = hunAlg.initialTsp;//tsp presentation node/node/.../node/depotnode
-	incumbentTsp = hunAlg.incumbentTsp;
-	optimalTsp = hunAlg.optimalTsp;
+	initialTsp = hunAlg.initialTsp;
 	costMatrix = hunAlg.costMatrix;
 	reducedCostMatrix = hunAlg.reducedCostMatrix;
 }
@@ -39,18 +37,8 @@ HungarianAlg::HungarianAlg(std::vector<int> initTsp, std::vector<std::vector<dou
 	assignmentOptimal = false;
 	initialTsp = initTsp;
 	costMatrix = cMatrix;
-	std::cout << "\nPopulate reduced const matrix." << std::endl;
 	reducedCostMatrixSize = initialTsp.size();
-	for (int i = 0; i < reducedCostMatrixSize; i++) {
-		std::vector<double> costVec;
-		for (int j = 0; j < reducedCostMatrixSize; j++) {
-			double val = 0;
-			i == j ? val = INFINITY : val = costMatrix[initialTsp.at(i)][initialTsp.at(j)];
-			costVec.push_back(val);
-		}
-		reducedCostMatrix.push_back(costVec);
-	}
-	//initial tsp cost
+	reducedCostMatrix = costMatrix;
 	for (int i = 0; i < reducedCostMatrixSize - 1; i++) {
 		initSolCost += costMatrix[initialTsp.at(i)][initialTsp.at(i + 1)];
 	}
@@ -59,7 +47,7 @@ HungarianAlg::HungarianAlg(std::vector<int> initTsp, std::vector<std::vector<dou
 
 //performs row reduction
 void HungarianAlg::performRowColumnReduction() {
-	std::cout << "\nPerform row reduction" << std::endl;
+	//std::cout << "\nPerform row reduction" << std::endl;
 	for (int i = 0; i < reducedCostMatrixSize; i++) {
 		double minVal = INFINITY;
 		for (int j = 0; j < reducedCostMatrixSize; j++) {
@@ -73,7 +61,7 @@ void HungarianAlg::performRowColumnReduction() {
 		reducedCost += minVal;
 	}
 
-	std::cout << "\nPerform column reduction." << std::endl;
+	//std::cout << "\nPerform column reduction." << std::endl;
 	for (int i = 0; i < reducedCostMatrixSize; i++) {
 		double minVal = INFINITY;
 		for (int j = 0; j < reducedCostMatrixSize; j++) {
@@ -91,7 +79,7 @@ void HungarianAlg::performRowColumnReduction() {
 
 //perform row scanning
 void HungarianAlg::rowScanning(std::set<int>& coveredRows, std::set<int>& coveredColumns, std::map<int, int>& boxPoints) {
-	std::cout << "\nRow scanning in progress!" << std::endl;
+	//std::cout << "\nRow scanning in progress!" << std::endl;
 	for (int i = 0; i < reducedCostMatrixSize; i++) {
 		auto it = coveredRows.find(i);
 		if (it == coveredRows.end()) {
@@ -107,7 +95,7 @@ void HungarianAlg::rowScanning(std::set<int>& coveredRows, std::set<int>& covere
 			if (numOfZeros == 1) {
 				coveredColumns.insert(colPos);
 				boxPoints.insert(std::pair<int, int>(i, colPos));
-				std::cout << "The new box point is : " << i << " , " << colPos << std::endl;
+				//std::cout << "The new box point is : " << i << " , " << colPos << std::endl;
 			}
 		}
 	}
@@ -115,7 +103,7 @@ void HungarianAlg::rowScanning(std::set<int>& coveredRows, std::set<int>& covere
 
 //perform column scanning
 void HungarianAlg::columnScanning(std::set<int>& coveredRows, std::set<int>& coveredColumns, std::map<int, int>& boxPoints) {
-	std::cout << "\nColumn scanning in progress!" << std::endl;
+	//std::cout << "\nColumn scanning in progress!" << std::endl;
 	for (int i = 0; i < reducedCostMatrixSize; i++) {
 		auto it = coveredColumns.find(i);
 		if (it == coveredColumns.end()) {
@@ -131,7 +119,7 @@ void HungarianAlg::columnScanning(std::set<int>& coveredRows, std::set<int>& cov
 			if (numOfZeros == 1) {
 				coveredRows.insert(rowPos);
 				boxPoints.insert(std::pair<int, int>(rowPos, i));
-				std::cout << "The new box point is : " << rowPos << " , " << i << std::endl;
+				//std::cout << "The new box point is : " << rowPos << " , " << i << std::endl;
 			}
 		}
 	}
@@ -139,10 +127,10 @@ void HungarianAlg::columnScanning(std::set<int>& coveredRows, std::set<int>& cov
 
 //scan for the number of uncovered zeros
 int HungarianAlg::uncoveredZeroScanning(std::set<int>& coveredRows, std::set<int>& coveredColumns) {
-	std::cout << "\nNumber of uncovered zero scanning in progress!" << std::endl;
+	//std::cout << "\nNumber of uncovered zero scanning in progress!" << std::endl;
 	std::map<int, int> numZeroInRow;
 	std::map<int, int> numZeroInCol;
-	std::cout << "\nUpdate number of uncovered zeros in each row." << std::endl;
+	//std::cout << "\nUpdate number of uncovered zeros in each row." << std::endl;
 	for (int i = 0; i < reducedCostMatrixSize; i++) {
 		auto itr = coveredRows.find(i);
 		if (itr == coveredRows.end()) {
@@ -156,7 +144,7 @@ int HungarianAlg::uncoveredZeroScanning(std::set<int>& coveredRows, std::set<int
 			numZeroInRow.insert(std::pair<int, int>(i, numZero));
 		}
 	}
-	std::cout << "\nUpdate number of uncovered zeros in each column." << std::endl;
+	//std::cout << "\nUpdate number of uncovered zeros in each column." << std::endl;
 	for (int i = 0; i < reducedCostMatrixSize; i++) {
 		auto itr = coveredColumns.find(i);
 		if (itr == coveredColumns.end()) {
@@ -174,7 +162,7 @@ int HungarianAlg::uncoveredZeroScanning(std::set<int>& coveredRows, std::set<int
 	for (auto& it : numZeroInCol) {
 		numOfZeros += it.second;
 	}
-	std::cout << "\nNumber of uncovered zeros : " << numOfZeros << std::endl;
+	//std::cout << "\nNumber of uncovered zeros : " << numOfZeros << std::endl;
 
 	return numOfZeros;
 }
@@ -230,7 +218,7 @@ void HungarianAlg::diagonalSelectionAdv(std::set<int>& coveredRows, std::set<int
 				if (reducedCostMatrix[it.second][itt.second] == 0) {
 					boxPoints.insert(std::pair<int, int>(it.second, itt.second));
 					coveredColumns.insert(itt.second);
-					std::cout << "The new box point is : " << it.second << " , " << itt.second << std::endl;
+					//std::cout << "The new box point is : " << it.second << " , " << itt.second << std::endl;
 					rowID = it.first;
 					colID = itt.first;
 					difVal = itt.first - it.first;
@@ -253,7 +241,7 @@ void HungarianAlg::diagonalSelectionAdv(std::set<int>& coveredRows, std::set<int
 							boxPoints.insert(std::pair<int, int>(it.second, itt.second));
 							coveredColumns.insert(itt.second);
 							rowID = it.first;
-							std::cout << "The new box point is : " << it.second << " , " << itt.second << std::endl;
+							//std::cout << "The new box point is : " << it.second << " , " << itt.second << std::endl;
 							flag2 = false;
 							break;
 						}
@@ -293,7 +281,7 @@ void HungarianAlg::coverMinimumValueAssignmentsAndCheckOptimality(bool& assignme
 	for (auto i : coveredRows) {
 		for (auto j : coveredColumns) {
 			IntersectionPoint point = IntersectionPoint(i, j);
-			std::cout << "Row : " << i << " Column : " << j << std::endl;
+			//std::cout << "Row : " << i << " Column : " << j << std::endl;
 			twiceCoveredPoints.push_back(point);
 		}
 	}
@@ -396,7 +384,7 @@ void HungarianAlg::runHungarianAlg() {
 			else {
 				std::cout << "\nOptimum assignment is found!" << std::endl;
 				populateListOfRoutes(boxPoints);
-				showAssignmentSolution();
+				//showAssignmentSolution();
 			}
 		}
 	}

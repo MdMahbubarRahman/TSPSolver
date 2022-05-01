@@ -46,19 +46,36 @@ int main() {
     }
 
     std::vector<int> initialtour;
-    initialtour.push_back(4);
+    initialtour.push_back(0);
     initialtour.push_back(10);
-    initialtour.push_back(13);
-    initialtour.push_back(40);
-    initialtour.push_back(50);
-    initialtour.push_back(43);
-    initialtour.push_back(14);
-    initialtour.push_back(16);
-    initialtour.push_back(17);
+    initialtour.push_back(9);
+    initialtour.push_back(15);
+    initialtour.push_back(8);
+    initialtour.push_back(7);
+    initialtour.push_back(6);
+
+    std::cout << "\nSize of the initial tour : " << initialtour.size() << std::endl;
 
     BranchAndBoundSolver bbSolver(initialtour, roadDistance);
     bbSolver.runBranchAndBoundSolver();
-
+    TSPSolution tspSol = bbSolver.getTSPSolution();
+    std::cout << "\nInitial tsp tour : " << std::endl;
+    for (auto it : initialtour) {
+        std::cout << it << " ";
+    }
+    std::cout << " " << std::endl;
+    double cost = 0;
+    for (int i = 0; i < initialtour.size() - 1; i++) {
+        cost += roadDistance[initialtour.at(i)][initialtour.at(i + 1)];
+    }
+    cost += roadDistance[initialtour.at(initialtour.size() - 1)][initialtour.at(0)];
+    std::cout << "\nInitial tsp tour cost : " << cost << std::endl;
+    std::cout << "\nFinal tsp tour : " << std::endl;
+    for (auto& it : tspSol.tour) {
+        std::cout << it << " ";
+    }
+    std::cout << " " << std::endl;
+    std::cout << "\nFinal tsp solution cost : " << tspSol.cost << std::endl;
 
     return 0;
 }

@@ -23,6 +23,7 @@ BranchAndBoundSolver::BranchAndBoundSolver(std::vector<int> initialTourOfCities,
 	for (int i = 0; i < oldListOfCities.size(); i++) {
 		std::vector<double> costVec;
 		for (int j = 0; j < oldListOfCities.size(); j++) {
+			//std::cout << "\ni index : " << i << " j index : " << j << std::endl;
 			i == j ? val = INFINITY : val = wholeCostMatrix[oldListOfCities.at(i)][oldListOfCities.at(j)];
 			costVec.push_back(val);
 		}
@@ -79,7 +80,7 @@ void BranchAndBoundSolver::generateBasicTransportationSolution() {
 	for (int i = 0; i < size; i++) {
 		columnCells.push_back(1);
 	}
-	std::cout << "Row scanning for the acyclic connected graph." << std::endl;
+	//std::cout << "Row scanning for the acyclic connected graph." << std::endl;
 	for (int i = 0; i < size; i++) {
 		auto col = assignmentSolution.find(i);
 		double val2 = 0;
@@ -163,6 +164,12 @@ void BranchAndBoundSolver::generateBasicTransportationSolution() {
 		assignedValueMap[it.first][it.second] == 1.0 ? base.value = 1.0 : base.value = 0.0;
 		transportationBasicSolution.push_back(base);
 	}
+	/*
+	std::cout << "\nShow the basic transportation solution : " << std::endl;
+	for (auto &it: transportationBasicSolution) {
+		std::cout << "\nrow id : " << it.rowID << ", column id : " << it.colID << ", value : " << it.value << std::endl;
+	}
+	*/
 }
 
 //initialize the branch and bound tree
@@ -183,7 +190,7 @@ void BranchAndBoundSolver::initBranchAndBoundTree() {
 		counter += 1;
 	}
 	bbTree.currentNumOfNodes = counter;
-	std::cout << "\nNumber of current nodes : " << counter << std::endl;
+	//std::cout << "\nNumber of current nodes : " << counter << std::endl;
 }
 
 //returns tsp solution if any exists
@@ -193,7 +200,6 @@ TSPSolution BranchAndBoundSolver::getTSPSolution() {
 
 //prune node consisting of a single tour
 void BranchAndBoundSolver::pruneNodeByIntegrality() {
-	//bool singleTourExist = false;
 	std::list<Node>::iterator nodeId;
 	std::list<std::list<Node>::iterator> singleTourNodes;
 	for (auto it = bbTree.branchNodes.begin(); it != bbTree.branchNodes.end(); it++) {
@@ -243,13 +249,13 @@ void BranchAndBoundSolver::pruneNodeByIntegrality() {
 		sol.objValue = (*nodeId).weakerLowerBound;
 		sol.tourSolution = route;
 		tourSolutions.push_back(sol);
-		bbTree.branchNodes.erase(nodeId);
 		if (sol.objValue < lowerBound) {
 			lowerBound = sol.objValue;
 			incumbent.tour = route;
 			incumbent.objValue = lowerBound;
 			incumbent.incumbentSolution = (*nodeId).basicSolution;
 		}
+		bbTree.branchNodes.erase(nodeId);
 		singleTourNodes.erase(id);
 	}
 }
@@ -259,7 +265,7 @@ void BranchAndBoundSolver::pruneNodesWithNegativeDelta() {
 	std::list<Node>::iterator nodeId;
 	std::list<std::list<Node>::iterator> negativeDeltaNodes;
 	for (auto it = bbTree.branchNodes.begin(); it != bbTree.branchNodes.end(); it++) {
-		if ((*it).delta < 0.1) {
+		if ((*it).delta < 0.0) {
 			negativeDeltaNodes.push_back(it);
 			std::cout << "\nNegative delta node has been found!" << std::endl;
 		}
@@ -298,13 +304,16 @@ void BranchAndBoundSolver::solveNodeByCostOperator(Node node) {
 	for (auto& it : nodes) {
 		bbTree.branchNodes.push_back(it);
 	}
-	opThry.showChildNodes();
+	//opThry.showChildNodes();
 }
 
 //check optimality of the BB algm
 void BranchAndBoundSolver::checkForBBOptimality() {
 	double val = INFINITY;
+	int value = 0;
 	for (auto& it : bbTree.branchNodes) {
+		value++;
+		//std::cout << "\nNode id : " << value << ", weaker lower bound : " << it.weakerLowerBound << std::endl;
 		if (it.weakerLowerBound < val) {
 			val = it.weakerLowerBound;
 		}
@@ -323,6 +332,7 @@ void BranchAndBoundSolver::runBranchAndBoundSolver() {
 		pruneNodeByIntegrality();
 		pruneNodesWithNegativeDelta();
 		checkForBBOptimality();
+		//std::cout << "\nNumber of nodes after pruning : " << bbTree.branchNodes.size() << std::endl;
 		if (bStatus == Optimal) {
 			break;
 		}
@@ -330,13 +340,14 @@ void BranchAndBoundSolver::runBranchAndBoundSolver() {
 			Node node = selectNodeBasedOnBestWeakerLowerBound();
 			solveNodeByCostOperator(node);
 		}
-		std::cout << "\nNumber of currents nodes in the tree : " << bbTree.branchNodes.size() << std::endl;
+		//std::cout << "\nNumber of currents nodes in the tree : " <<bbTree.branchNodes.size() << std::endl;
 	}
-	std::cout << "\nObjective value : " << incumbent.objValue << std::endl;
-	std::cout << "\nThe tour is : " << std::endl;
+	//tsp solution with respect to the original node node identities
+	tspSolution.cost = incumbent.objValue;
+	int val = 0;
 	for (auto& it : incumbent.tour) {
-		std::cout << it << " ";
+		val = newCityToOldCityMap[it];
+		tspSolution.tour.push_back(val);
 	}
-	std::cout << " " << std::endl;
 }
 

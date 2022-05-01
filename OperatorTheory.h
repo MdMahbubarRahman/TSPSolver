@@ -89,10 +89,11 @@ public:
 	OperatorTheory(std::list<BasicCell> basicSolution, std::vector<std::vector<double>> costTableau);
 	OperatorTheory(std::list<BasicCell> basicSolution, std::vector<double> rowWiseDualSolution, std::vector<double> columnWiseDualSolution, std::vector<std::vector<double>> costTableau);
 	OperatorTheory(const OperatorTheory& opThr);
-	void generateInitialDualSolution();
+	void generateDualSolution();
 	void scanningRoutine(int p, int q);
 	void updateDualSolution(double val);
 	void findMaxDeltaAndEnteringCell(int p, int q);
+	void findMaxDeltaAndEnteringCellWithForbiddenCell(int p, int q, Cell forbiddenCell);
 	void generateCycleWithEnteringCell(int enteringCellRowId, int enteringCellColID);
 	void generateListOfRoutes(std::map<int, int> boxPoints);
 	void generateChildNodes();
@@ -106,9 +107,4 @@ public:
 };
 
 #endif
-
-
-
-
-
 
